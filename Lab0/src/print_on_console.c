@@ -11,12 +11,12 @@
 
 void print_on_console(int *array,int num_of_elements)
 {
-	printf("\nArray:\n");
+	printf("\nSorted  Array:\n");
 
 	/* Loop for printing sorted array on the console */
 	for(int i=0;i<num_of_elements;i++)
 	{
-		printf("%d ",*(array+i));
+		printf("%d\n",*(array+i));
 	}
 
 	printf("\n");
