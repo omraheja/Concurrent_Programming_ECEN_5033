@@ -22,6 +22,8 @@
 
 /* Defines */
 #define MAX_THREADS	(60)
+#define DEBUG		(0)
+
 
 /* Global variabeles */
 static char *name = "Om Raheja";
@@ -129,30 +131,34 @@ void *thread_main(void *args)
 	size_t tid = *((size_t*)args);
 
 	int thread_part = part++;
+	
 	int low,high;
 
-	pthread_barrier_wait(&bar);
+	pthread_barrier_wait(&bar);	//wait for all threads to arrive at this point
+	
 	if(tid == 1)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&start);
 	}
+
 	pthread_barrier_wait(&bar);
 
+#if DEBUG
 	printf("Number of elements = %d\n",count);
 	printf("Number of threads =  %d\n",num_of_threads);
-	elem_per_thread = count/num_of_threads;
+#endif
 
+	elem_per_thread = count/num_of_threads;		//Number of elements per thread
 
+	/* Assign all remaining elements to the last thread */
 	if(thread_part == (num_of_threads-1))
 	{
-		//low = low_index_for_last_thread;
-		//low = (elem_per_thread*(num_of_threads-1));
 		low  = thread_part * (count/num_of_threads);
 		high = count - 1;
 		lower_index[thread_part] = low;
 		higher_index[thread_part] = high;
-		//printf("THREAD_PART = %d\t NUM_OF_ELEM_SORTED = %d\t LOW = %d\t HIGH = %d\n",thread_part,high-low+1,low,high);
 	}
+	/* Assign number of elements calculated to all threads except last thread */
 	else
 	{
 		low  = thread_part * (count/num_of_threads);
@@ -160,12 +166,13 @@ void *thread_main(void *args)
 
 		lower_index[thread_part] = low;
 		higher_index[thread_part] = high;
-		//printf("THREAD_PART = %d\t NUM_OF_ELEM_SORTED = %d\t LOW = %d\t HIGH = %d\n",thread_part,high-low+1,low,high);
 	}
 
+#if DEBUG
 	printf("THREAD_PART = %d\t NUM_OF_ELEM_SORTED = %d\t LOW = %d\t HIGH = %d\n",thread_part,high-low+1,low,high);
+#endif
 
-
+	/* Calculate middle element */
 	int mid  = low + (high - low)/2;
 
 	if(low < high)
@@ -248,7 +255,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* Store Input file name */
 	strcpy(input_file,argv[optind]);
+
+#if DEBUG
 	printf("After all inputs are parsed, %s\n",input_file);
 	printf("Number of threads = %d\n",num_of_threads);
 	printf("Arg count = %d\n",argc);
@@ -259,7 +269,7 @@ int main(int argc, char *argv[])
 	printf("Arg[4]= %s\n",argv[4]);
 	printf("Arg[5]= %s\n",argv[5]);
 	printf("Arg[6]= %s\n",argv[6]);
-
+#endif
 
 	if(name_flag == 1)
 	{
@@ -281,19 +291,24 @@ int main(int argc, char *argv[])
 	while(fscanf(input_file_ptr,"%d",&number)== 1)
 	{
 		count++;
-
 	}
 
 	fclose(input_file_ptr);           //close file
 
+#if DEBUG
 	printf("Number of elements = %d\n",count);
+#endif
+	
 	int array[count];       //declare array to store the elements from the file
 
+	/* Assign base address of array to a global pointer for its access across all threads */
 	array_base_addr = array;
 
+#if DEBUG
+	/* Debugging statement to check if address assigned to global pointer is correct or not */
 	printf("Array Base Address: %x\n",array_base_addr);
 	printf("Array: %x\n",array);
-
+#endif
 
 	/* Initialize all elements of the array to zero */
 	for(int i=0;i<count;i++)
@@ -319,375 +334,135 @@ int main(int argc, char *argv[])
 		z++;
 	}
 
-
+#if DEBUG
 	/* Print the elements of the array */
 	for(int i=0;i<count;i++)
 	{
 		printf("Array[%d] = %d\n",i,array[i]);
 	}
+#endif
 
 
-	/* Spawn the number of threads mentioned in the command line */
-	threads = malloc(num_of_threads*sizeof(pthread_t));
-	args    = malloc(num_of_threads*sizeof(size_t));
-	pthread_barrier_init(&bar, NULL, num_of_threads);
-	size_t i;
-
-
-	for(i=1;i<num_of_threads;i++)
+	/* Check if algorithm selected is fork/join */
+	if(!strcmp(algo_selected,"fj"))
 	{
-		args[i] = i+1;
-		printf("Creating thread: %zu\n",args[i]);
-		/* Create threads */
-		ret = pthread_create(&threads[i],NULL,&thread_main,&args[i]);
-		/* Check if threads are created successfully */
-		if(ret)
+		/* Spawn the number of threads mentioned in the command line */
+		threads = malloc(num_of_threads*sizeof(pthread_t));
+		args    = malloc(num_of_threads*sizeof(size_t));
+		pthread_barrier_init(&bar, NULL, num_of_threads);
+		size_t i;
+
+
+		for(i=1;i<num_of_threads;i++)
 		{
-			printf("[ERROR]: Failed to create %d\n",ret);
-			exit(-1);
-		}
-	}
+			args[i] = i+1;			//Arguments to be passed to each thread
+			
+			printf("Creating thread: %zu\n",args[i]);
+			
+			/* Create threads */
+			ret = pthread_create(&threads[i],NULL,&thread_main,&args[i]);
 
-	i=1;
-	thread_main(&i);
-
-	/* Join threads */
-	for(size_t i=1; i<num_of_threads; i++)
-	{
-		ret = pthread_join(threads[i],NULL);
-		if(ret)
-		{
-			printf("{ERROR]: pthread_join: %d\n", ret);
-			exit(-1);
-		}
-		printf("Joined thread %zu\n",i+1);
-	}
-
-	/* Merge for 15 elements and 6 threads */
-	//	merge(0,1,3);
-	//	merge(0,3,5);
-	//	merge(0,5,7);
-	//	merge(0,7,9);
-	//	merge(0,9,14);
-
-
-
-	/* merge for 4 threads and element number = multiple of 4 */
-	/*	merge(0, (count / 2 - 1) / 2, count / 2 - 1); 
-		merge(count / 2, count/2 + (count-1-count/2)/2, count - 1); 
-		merge(0, (count - 1)/2, count - 1); 
-		*/
-
-	/* merge for 17 elements 4 threads */
-	//	merge(0,3,7);
-	//	merge(0,7,11);
-	//	merge(0,11,16);
-
-
-	int high_temp = 0;
-	int low_temp = 0;
-	for (int i = 0; i < num_of_threads; ++i)
-	{
-		for (int j = i + 1; j < num_of_threads; ++j)
-		{
-			if (higher_index[i] > higher_index[j])
+			/* Check if threads are created successfully */
+			if(ret)
 			{
-				high_temp =  higher_index[i];
-				higher_index[i] = higher_index[j];
-				higher_index[j] = high_temp;
+				printf("[ERROR]: Failed to create %d\n",ret);
+				exit(-1);
 			}
 		}
-	}
 
-	for(int i=0;i<20;i++)
-	{
-		printf("%d ",higher_index[i]);
-	}
+		/* Main thread also performs same task */
+		i=1;
+		thread_main(&i);
+
+		/* Join threads */
+		for(size_t i=1; i<num_of_threads; i++)
+		{
+			ret = pthread_join(threads[i],NULL);
+			if(ret)
+			{
+				printf("{ERROR]: pthread_join: %d\n", ret);
+				exit(-1);
+			}
+			printf("Joined thread %zu\n",i+1);
+		}
+
+#if DEBUG
+		/* Merge for 15 elements and 6 threads */
+		//	merge(0,1,3);
+		//	merge(0,3,5);
+		//	merge(0,5,7);
+		//	merge(0,7,9);
+		//	merge(0,9,14);
+
+		/* merge for 4 threads and element number = multiple of 4 */
+		//	merge(0, (count / 2 - 1) / 2, count / 2 - 1); 
+		//	merge(count / 2, count/2 + (count-1-count/2)/2, count - 1); 
+		//	merge(0, (count - 1)/2, count - 1); 
+
+		/* merge for 17 elements 4 threads */
+		//	merge(0,3,7);
+		//	merge(0,7,11);
+		//	merge(0,11,16);
+#endif
+
+		/* Variables to store temporary variables */
+		int high_temp = 0;
+		int low_temp = 0;
+
+		/* Sort the array containing higher indices of all threads */
+		for (int i = 0; i < num_of_threads; ++i)
+		{
+			for (int j = i + 1; j < num_of_threads; ++j)
+			{
+				if (higher_index[i] > higher_index[j])
+				{
+					high_temp =  higher_index[i];
+					higher_index[i] = higher_index[j];
+					higher_index[j] = high_temp;
+				}
+			}
+		}
+
+#if DEBUG
+		/* Print indices to ensure correctness */
+		for(int i=0;i<num_of_threads;i++)
+		{
+			printf("%d ",higher_index[i]);
+		}
+#endif
+
+		for(int i=0;i<num_of_threads-1;i++)
+		{
+			merge(0,higher_index[i],higher_index[i+1]);
+		}
+
+		print_in_file(array,count,output_file);
+		
+#if DEBUG
+		/* Print the elements of the array */
+		for(int i=0;i<count;i++)
+		{
+			printf("Array[%d] = %d\n",i,array[i]);
+		}
+#endif
+
+		/* Free the resources allocated */
+		free(threads);
+		free(args);
+		pthread_barrier_destroy(&bar);
+
+		/* Calculate time elapsed */
+		unsigned long long elapsed_ns;
+		elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
+		printf("Elapsed (ns): %llu\n",elapsed_ns);
+		double elapsed_s = ((double)elapsed_ns)/1000000000.0;
+		printf("Elapsed (s): %lf\n",elapsed_s);
 
-	for(int i=0;i<num_of_threads-1;i++)
-	{
-		merge(0,higher_index[i],higher_index[i+1]);
-	}
-
-	print_in_file(array,count,output_file);
-	/* Print the elements of the array */
-	for(int i=0;i<count;i++)
-	{
-		printf("Array[%d] = %d\n",i,array[i]);
-	}
-
-
-	/* Free the resources allocated */
-	free(threads);
-	free(args);
-	pthread_barrier_destroy(&bar);
-
-	/* Calculate time elapsed */
-	unsigned long long elapsed_ns;
-	elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
-	printf("Elapsed (ns): %llu\n",elapsed_ns);
-	double elapsed_s = ((double)elapsed_ns)/1000000000.0;
-	printf("Elapsed (s): %lf\n",elapsed_s);
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if 0	
-/* Case 1:  [./mysort --name]
- * Case 2:  [./mysort sourcefile.txt] */
-if(argc == 2)
-{
-	/* Print name if -n or --name is mentioned as a command line argument */
-	if(name_flag == 1)
-	{
-		printf("Name = %s\n",name);
-		exit(1);
 	}
 	else
 	{
-		FILE *fptr;				//File pointer
-		fptr = fopen(argv[1],"r+");		//open file
+		printf("Bucket sort soon....\n");
 
-		/* Check if file opened successfully or not */
-		if(fptr == NULL)
-		{
-			printf("Error in Reading File\n");
-			exit(1);
-		}
-
-		/* Calculate the number of integers in the file */
-		while(fscanf(fptr,"%d",&number)==1)
-		{
-			count++;
-
-		}
-
-		fclose(fptr);		//close file
-
-		int array[count];	//declare array to store the elements from the file
-
-		/* Initialize all elements of the array to zero */
-		for(int i=0;i<count;i++)
-		{
-			array[i] = 0;
-		}
-
-		/* Open file */
-		fptr = fopen(argv[1],"r+");
-
-		/* Check if the file opened successfully or not */
-		if(fptr == NULL)
-		{
-			printf("Error in Reading File\n");
-			exit(1);
-		}
-
-		/* Store the elements in the array from the file */
-		for(int i=0;i<count;i++)
-		{
-			fscanf(fptr,"%d", &number);
-			array[z] = number;
-			z++;
-		}
-
-		/* Calculate the number of elements in the array */
-		int number_of_elements = sizeof(array)/sizeof(int);
-
-		/* Sort the array in ascending order using Quick Sort Algorithm */
-		quick_sort(array,0,number_of_elements - 1);
-
-		/* Print Sorted Array on the output terminal */
-		print_on_console(array,(sizeof(array)/sizeof(int)));
 	}
 
-	exit(1);
 }
-
-if(argc >= 3)
-{
-	/* Print name if -n or --name is mentioned as a command line argument */
-	if(name_flag == 1)
-	{
-		printf("Name = %s\n",name);
-		exit(1);
-	}
-
-	/* Copy input file name in a variable */
-	strcpy(input_file,argv[optind]);
-
-	/*
-	   printf("Input File =  %s\n",input_file);
-	   printf("Output File = %s\n",output_file);
-	   */
-
-	/*
-	   printf("0->%s\n",argv[0]);
-	   printf("1->%s\n",argv[1]);
-	   printf("2->%s\n",argv[2]);
-	   printf("3->%s\n",argv[3]);
-	   printf("4->%s\n",argv[4]);
-	   */
-
-	FILE *fptr;			//File pointer
-
-	fptr = fopen(input_file,"r+");	//open file
-
-	/* Check if file opened successfully or not */
-	if(fptr == NULL)
-	{
-		printf("Error in Reading File\n");
-		exit(1);
-	}
-
-	/* Calculate the number of integers in the file */
-	while(fscanf(fptr,"%d",&number)==1)
-	{
-		count++;
-
-	}
-
-	fclose(fptr);           //close file
-
-	int array[count];       //declare array to store the elements from the file
-
-	/* Initialize all elements of the array to zero */
-	for(int i=0;i<count;i++)
-	{
-		array[i] = 0;
-	}
-
-
-	/* Open file */
-	fptr = fopen(input_file,"r+");
-
-	/* Check if the file opened successfully or not */
-	if(fptr == NULL)
-	{
-		printf("Error in Reading File\n");
-		exit(1);
-	}
-
-	/* Store the elements in the array from the file */
-	for(int i=0;i<count;i++)
-	{
-		fscanf(fptr,"%d", &number);
-		array[z] = number;
-		z++;
-	}
-
-	/* Calculate the number of elements in the array */
-	int number_of_elements = sizeof(array)/sizeof(int);
-
-	/* Sort the array in ascending order using Quick Sort Algorithm */
-	quick_sort(array,0,number_of_elements - 1);
-
-	/* Check if the output file was mentioned */
-	if(output_file_flag ==1)
-	{
-		/* Print Sorted Array on the output terminal */
-		print_in_file(array,(sizeof(array)/sizeof(int)),output_file);
-	}
-	/* Else print the result on the console */
-	else if(output_file_flag == 0)
-	{
-		/* Print Sorted Array on the output terminal */
-		print_on_console(array,(sizeof(array)/sizeof(int)));
-
-	}
-}
-
-return 0;
-}
-#endif
