@@ -13,12 +13,17 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <math.h>
+
+/* Standard C++ Library Headers */
+#include <iostream>
+#include <vector>
 
 /* User Defined Header Files */
 #include "../inc/print_on_console.h"
 #include "../inc/quick_sort.h"
 #include "../inc/print_in_file.h"
-
+#include "../inc/bucket_sort.h"
 
 /* Defines */
 #define MAX_THREADS	(60)
@@ -49,6 +54,23 @@ int low_index_for_last_thread = 0;
 /* Global arrays to store high and low indexes for merging arrays */
 int lower_index[MAX_THREADS];
 int higher_index[MAX_THREADS];
+
+
+/* Global variables for Bucket Sort */
+int *base_address_of_buckets[MAX_THREADS];
+
+
+
+void print(std::vector<int> const &input)
+{
+	for(int i=0;i<input.size();i++)
+	{
+		std::cout << input.at(i) << '\n';
+	}
+
+}
+
+
 
 
 void merge(int low,int mid,int high)
@@ -131,11 +153,11 @@ void *thread_main(void *args)
 	size_t tid = *((size_t*)args);
 
 	int thread_part = part++;
-	
+
 	int low,high;
 
 	pthread_barrier_wait(&bar);	//wait for all threads to arrive at this point
-	
+
 	if(tid == 1)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&start);
@@ -277,6 +299,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	if(num_of_threads > MAX_THREADS)
+	{
+		printf("Limit for Number of Threads is %d\n",(MAX_THREADS-10));
+		exit(-1);
+	}
+
 	FILE *input_file_ptr;				//input file pointer	
 	input_file_ptr = fopen(input_file,"r+");	//open file
 
@@ -298,7 +326,7 @@ int main(int argc, char *argv[])
 #if DEBUG
 	printf("Number of elements = %d\n",count);
 #endif
-	
+
 	int array[count];       //declare array to store the elements from the file
 
 	/* Assign base address of array to a global pointer for its access across all threads */
@@ -347,8 +375,8 @@ int main(int argc, char *argv[])
 	if(!strcmp(algo_selected,"fj"))
 	{
 		/* Spawn the number of threads mentioned in the command line */
-		threads = malloc(num_of_threads*sizeof(pthread_t));
-		args    = malloc(num_of_threads*sizeof(size_t));
+		threads = (pthread_t *)malloc(num_of_threads*sizeof(pthread_t));
+		args    = (size_t *)malloc(num_of_threads*sizeof(size_t));
 		pthread_barrier_init(&bar, NULL, num_of_threads);
 		size_t i;
 
@@ -356,9 +384,9 @@ int main(int argc, char *argv[])
 		for(i=1;i<num_of_threads;i++)
 		{
 			args[i] = i+1;			//Arguments to be passed to each thread
-			
+
 			printf("Creating thread: %zu\n",args[i]);
-			
+
 			/* Create threads */
 			ret = pthread_create(&threads[i],NULL,&thread_main,&args[i]);
 
@@ -407,7 +435,6 @@ int main(int argc, char *argv[])
 
 		/* Variables to store temporary variables */
 		int high_temp = 0;
-		int low_temp = 0;
 
 		/* Sort the array containing higher indices of all threads */
 		for (int i = 0; i < num_of_threads; ++i)
@@ -437,7 +464,7 @@ int main(int argc, char *argv[])
 		}
 
 		print_in_file(array,count,output_file);
-		
+
 #if DEBUG
 		/* Print the elements of the array */
 		for(int i=0;i<count;i++)
@@ -459,9 +486,75 @@ int main(int argc, char *argv[])
 		printf("Elapsed (s): %lf\n",elapsed_s);
 
 	}
-	else
+	/********************************************************* BUCKET SORT ************************************************************/
+	else if (!strcmp(algo_selected,"bucket"))
 	{
+		/* Test message */
 		printf("Bucket sort soon....\n");
+
+		/* Create buckets (one for each thread) */
+		std::vector<int> bucket[num_of_threads];
+
+		/* Assign the 1st element of the array to largest_element variable */
+		int largest_element = array[0];
+
+		/* Find the max element in the dataset */
+		for(int i=0;i < count;i++)
+		{
+			if(largest_element <= array[i])
+			{
+				largest_element = array[i];
+			}
+		}
+
+#if DEBUG
+		printf("Largest Element of the Data set is %d\n",largest_element);
+#endif
+
+		for(int i=0;i<count;i++)
+		{
+			int bucket_number = (int)floor(num_of_threads*array[i]/largest_element);
+			//printf("Bucket Number = %d\n",bucket_number);
+
+			if(bucket_number == 0)
+			{
+				bucket[bucket_number].push_back(array[i]);
+				//printf("%d ",bucket[bucket_number]);
+			}
+			else
+			{
+				bucket[bucket_number-1].push_back(array[i]);
+				//printf("%d ",bucket[bucket_number-1]);
+			}
+		}		
+
+		for(int i=0;i<num_of_threads;i++)
+		{
+			print(bucket[i]);
+		}
+
+
+		for(int i=0;i<num_of_threads;i++)
+		{
+			int *bucket_ptr = (int *)&bucket[i].front();
+			quick_sort(bucket_ptr,0,bucket[i].size()-1);
+			print(bucket[i]);
+		}
+
+
+
+
+		for(int i=0;i<num_of_threads;i++)
+		{
+
+			//printf("Address %d = %x\n",i,bucket+i);
+
+			//int *bucket = (int *)malloc((sizeof(int)*count));
+			//printf("BUCKET %d ADDRESS = %x\n",i,bucket);
+			//base_address_of_buckets[i] = bucket;
+			//printf("Base address of bucket %d is %x\n",i,base_address_of_buckets[i]);
+
+		}
 
 	}
 
