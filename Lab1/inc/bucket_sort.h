@@ -10,7 +10,10 @@
 
 /* Standard C Library Headers */
 #include <stdio.h>
+#include <math.h>
 #include <vector>
+
+#include "quick_sort.h"
 
 /*@Function Name: buckt_sort
  *@Brief        :
@@ -19,6 +22,13 @@
  *@Return       : void
  * */
 void bucket_sort(std::vector<int> bucket);
+
+
+
+
+
+
+void bucket_insert(int *array_base_address,int start_index,int end_index,int tid);
 
 #endif
 
