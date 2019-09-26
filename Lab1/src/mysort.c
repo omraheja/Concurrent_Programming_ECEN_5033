@@ -37,7 +37,7 @@
 
 
 /* Defines */
-#define MAX_THREADS	(60)
+#define MAX_THREADS	(10000)
 #define DEBUG		(0)
 
 
@@ -440,6 +440,12 @@ int main(int argc, char *argv[])
 				exit(1);
 		}
 	}
+	if(name_flag == 1)
+        {
+                printf("Name: %s\n",name);
+                exit(1);
+        }
+
 
 	/* Store Input file name */
 	strcpy(input_file,argv[optind]);
@@ -456,19 +462,6 @@ int main(int argc, char *argv[])
 	printf("Arg[5]= %s\n",argv[5]);
 	printf("Arg[6]= %s\n",argv[6]);
 #endif
-
-	if(name_flag == 1)
-	{
-		printf("Name: %s\n",name);
-		exit(1);
-	}
-
-	if(num_of_threads > MAX_THREADS)
-	{
-		printf("Limit for Number of Threads is %d\n",(MAX_THREADS-10));
-		exit(-1);
-	}
-
 
 	/* Initialize mutex for bucket sort */
 	if(pthread_mutex_init(&lock,NULL)!=0)
