@@ -1,7 +1,7 @@
 /*@Author       : Om Raheja
  *@File Name    : quick_sort.c 
  *@Date         : 9/2/2019 
- *@Tools        : Compiler:gcc ; Editor: Vim
+ *@Tools        : Compiler: g++ ; Editor: Vim
  *@References   : The concept for Quick Sort Algorithm was referenced from https://www.youtube.com/watch?v=3DV8GO9g7B4
  */
 

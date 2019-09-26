@@ -1,9 +1,17 @@
 /*@Author       : Om Raheja
  *@File Name    : mysort.c 
- *@Date         : 
- *@Tools        : Compiler:gcc ; Editor: Vim
- *@References	: 
+ *@Date         : 9/25/2019
+ *@Tools        : Compiler: g++ ; Editor: Vim
+ *@Course	: Concurrent Programming ECEN 5033
+ *@References	: https://www.youtube.com/watch?v=geVyIsFpxUs&t=340s
+ *		: References for C++ syntax and concepts were taken from geeksforgeeks
+ *		: https://thispointer.com/c-how-to-get-element-by-index-in-vector-at-vs-operator/ 
+ *		: https://cal-linux.com/tutorials/vectors.html
+ *		: https://www.geeksforgeeks.org/passing-vector-function-cpp/
+ *		: Base code was taken as reference from Professor Joe's materials 
+ *		  provided in class
  */
+
 
 /* Standard C Library Headers */
 #include <stdio.h>
@@ -15,9 +23,11 @@
 #include <pthread.h>
 #include <math.h>
 
+
 /* Standard C++ Library Headers */
 #include <iostream>
 #include <vector>
+
 
 /* User Defined Header Files */
 #include "../inc/print_on_console.h"
@@ -25,31 +35,37 @@
 #include "../inc/print_in_file.h"
 #include "../inc/bucket_sort.h"
 
+
 /* Defines */
 #define MAX_THREADS	(60)
 #define DEBUG		(0)
 
 
 /* Global variabeles */
-static char *name = "Om Raheja";
-int num_of_threads = 4;		//Default value of the number of threads
-int part = 0;			//To keep track of the indices of the array
-int count = 0;
+static char name[] = "Om Raheja";	//String to be printed
+int num_of_threads = 4;			//Default value of the number of threads
+int part = 0;				//To keep track of the indices of the array
+int count = 0;				//Store total number of elements in the input file
+
 
 /* Thread related global variables */
 pthread_t *threads;
 size_t *args;
 pthread_barrier_t bar;
 
+
 /* Timespec structures to calculate amount of time taken for algorithm to sort the array */
 struct timespec start,end;
+
 
 /* Global variable to store base address of the array */
 int *array_base_addr;
 
+
 /* Global variables required for index tracking */
 int elem_per_thread = 0;
 int low_index_for_last_thread = 0;
+
 
 /* Global arrays to store high and low indexes for merging arrays */
 int lower_index[MAX_THREADS];
@@ -65,9 +81,10 @@ int largest_element;
 /* Mutexes for Synchronization */
 pthread_mutex_t lock;
 
+
 /* File pointer */
 FILE *output_file_ptr;
-char output_file[20];
+char output_file[20];		//variable to store output file name
 
 
 /* Print a vector */
@@ -77,9 +94,7 @@ void print(std::vector<int> const &input)
 	{
 		std::cout << input.at(i) << '\n';
 	}
-
 }
-
 
 
 /* Merge the sub-arrays */
@@ -134,7 +149,6 @@ void merge(int low,int mid,int high)
 }
 
 
-
 /* Merge sort function */
 void merge_sort(int low,int high)
 {
@@ -153,7 +167,6 @@ void merge_sort(int low,int high)
 		merge(low,mid,high);
 	}
 }
-
 
 
 /* Thread Main */
@@ -217,12 +230,11 @@ void *thread_main(void *args)
 	printf("Thread %zu: %d ; Thread_Part = %d\n",tid,i++,thread_part);
 	printf("Thread %zu reporting for duty\n",tid);
 
-	pthread_barrier_wait(&bar);
+	pthread_barrier_wait(&bar);		//Wait for all threads to join
 	if(tid==1)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&end);
 	}
-
 	return 0;
 }
 
@@ -243,8 +255,8 @@ void *bucket_main(void *args)
 	/* If tid is 1 (ie. If its the main thread, start the timer) */
 	if(tid == 1)
 	{
-		buck.resize(num_of_threads, std::vector<int>());
-		clock_gettime(CLOCK_MONOTONIC,&start);
+		buck.resize(num_of_threads, std::vector<int>());	//Resize the vector to the number of threads
+		clock_gettime(CLOCK_MONOTONIC,&start);			//Start the timer to measure time taken by algorithm
 	}
 
 	pthread_barrier_wait(&bar);	//wait for all threads to arrive at this point
@@ -254,10 +266,10 @@ void *bucket_main(void *args)
 	/* Assign all remaining elements to the last thread */
 	if(thread_part == (num_of_threads-1))
 	{
-		low  = thread_part * (count/num_of_threads);
-		high = count - 1;
-		lower_index[thread_part] = low;
-		higher_index[thread_part] = high;
+		low  = thread_part * (count/num_of_threads);	//Calculate lower index
+		high = count - 1;				//Calculate higher index
+		lower_index[thread_part] = low;			//Store lower index in an array
+		higher_index[thread_part] = high;		//Store higher index in an array
 	}
 	/* Assign number of elements calculated to all threads except last thread */
 	else
@@ -269,15 +281,14 @@ void *bucket_main(void *args)
 		higher_index[thread_part] = high;
 	}
 
-	//#if DEBUG
+#if DEBUG
 	printf("THREAD_PART = %d\t NUM_OF_ELEM_SORTED = %d\t LOW = %d\t HIGH = %d\n",thread_part,high-low+1,low,high);
-	//#endif
+#endif
 
 	pthread_barrier_wait(&bar);
 
 	int high_temp;	//for sorting the array of higher indices
 	int low_temp;	//for sorting the array of lower  indices
-
 
 	/* Sort the array containing higher indices of all threads */
 	for (int i = 0; i < num_of_threads; ++i)
@@ -323,70 +334,46 @@ void *bucket_main(void *args)
 	printf("\n");
 #endif
 
-/*
 
-	for(int i=0;i<num_of_threads;i++)
-	{
-		for(int j=lower_index[i];j<=higher_index[i];j++)
-		{
-			int num_to_insert = *(array_base_addr + j);
-			printf("Number to be inserted is %d\n",num_to_insert);
-			buck[tid].push_back(num_to_insert);		//push respective element in corresponding bucket
-		}
-	}
-*/
+	pthread_mutex_lock(&lock);		//Lock before inserting elements in the bucket
 
-	//bucket_insert(array_base_addr,lower_index[tid],higher_index[tid],tid);
+	bucket_insert(array_base_addr,low,high,thread_part);		//Insert elements in appropriate buckets
+
+	pthread_mutex_unlock(&lock);		//Unlock after insertion of elements in bucket is over
 	
+	pthread_barrier_wait(&bar);		//Wait for all threads to insert their elements in buckets
+	
+	/* Sort the buckets  */
+	quick_sort(&buck[thread_part].front(),0,buck[thread_part].size()-1);
+
+	pthread_barrier_wait(&bar);		//Wait for all threads to sort buckets associated with them
+
+
+#if 0	
 	pthread_mutex_lock(&lock);
-	
-	bucket_insert(array_base_addr,low,high,thread_part);
-	
-	pthread_mutex_unlock(&lock);
-
-	pthread_barrier_wait(&bar);
-
-
-	int *bucket_ptr = (int *)&buck[thread_part].front();
-
-        printf("Bucket_ptr[%d] = %x\n",tid,&buck[thread_part].front());
-
-        printf("BEFORE SORTING: ");
-        for(int i = 0; i < buck[thread_part].size(); i++)
-        {
-                printf("%d ", *(bucket_ptr+i));
-        }
-        printf("\n");
-
-        quick_sort(&buck[thread_part].front(),0,buck[thread_part].size()-1);
-
-	   pthread_barrier_wait(&bar);
-
-
-	
-pthread_mutex_lock(&lock);
-
-        output_file_ptr = fopen(output_file,"w+");
+	output_file_ptr = fopen(output_file,"w+");
 	for(int i = 0; i < num_of_threads/*buck[thread_part].size()*/; i++)
-        {
+	{
 		for(int j=0;j< buck[thread_part].size();j++)
 		{
 			fprintf(output_file_ptr,"%d\n",buck[i][j]);
 		}
-                //fprintf(output_file_ptr,"%d\n", *(&buck[thread_part].front()+i));
-        }
+	}
 	fclose(output_file_ptr);
+	pthread_mutex_unlock(&lock);
+#endif
 
-pthread_mutex_unlock(&lock);
 
-
-	
-	
-	
+#if DEBUG
 	printf("Thread %zu: %d ; Thread_Part = %d\n",tid,i++,thread_part);
 	printf("Thread %zu reporting for duty\n",tid);
+#endif
 
-	pthread_barrier_wait(&bar);
+	
+	
+	//pthread_barrier_wait(&bar);
+	
+	
 	if(tid==1)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&end);
@@ -394,10 +381,6 @@ pthread_mutex_unlock(&lock);
 
 	return 0;
 }
-
-
-
-
 
 
 
@@ -571,6 +554,7 @@ int main(int argc, char *argv[])
 		size_t i;
 
 
+		/* Create Threads */
 		for(i=1;i<num_of_threads;i++)
 		{
 			args[i] = i+1;			//Arguments to be passed to each thread
@@ -648,11 +632,13 @@ int main(int argc, char *argv[])
 		}
 #endif
 
+		/* Merge the arrays */
 		for(int i=0;i<num_of_threads-1;i++)
 		{
 			merge(0,higher_index[i],higher_index[i+1]);
 		}
 
+		/* Print the sorted array in the file */
 		print_in_file(array,count,output_file);
 
 #if DEBUG
@@ -679,9 +665,6 @@ int main(int argc, char *argv[])
 	/********************************************************* BUCKET SORT ************************************************************/
 	else if (!strcmp(algo_selected,"bucket"))
 	{
-		/* Test message */
-		printf("Bucket sort soon....\n");
-
 		/* Create buckets (one for each thread) */
 		std::vector<int> bucket[num_of_threads];
 
@@ -711,6 +694,7 @@ int main(int argc, char *argv[])
 		size_t i;
 
 
+		/* Create Threads */
 		for(i=1;i<num_of_threads;i++)
 		{
 			args[i] = i+1;                  //Arguments to be passed to each thread
@@ -744,26 +728,7 @@ int main(int argc, char *argv[])
 			printf("Joined thread %zu\n",i+1);
 		}
 
-
-#if 0
-		for(int i=0;i<count;i++)
-		{
-			int bucket_number = (int)floor(num_of_threads*array[i]/largest_element);
-			//printf("Bucket Number = %d\n",bucket_number);
-
-			if(bucket_number == 0)
-			{
-				bucket[bucket_number].push_back(array[i]);
-				//printf("%d ",bucket[bucket_number]);
-			}
-			else
-			{
-				bucket[bucket_number-1].push_back(array[i]);
-				//printf("%d ",bucket[bucket_number-1]);
-			}
-		}		
-#endif
-
+#if DEBUG
 		for(int i=0;i<num_of_threads;i++)
 		{
 			printf("Thread %d\n",i);
@@ -775,70 +740,22 @@ int main(int argc, char *argv[])
 			std::cout << &buck[i].front() << "\n\n";
 
 		}
-#if 0
-		for(int i=0;i<num_of_threads;i++)
-		{
-			quick_sort(&buck[i].front(),0,buck[i].size()-1);
-		}
-
-		for(int i=0;i<num_of_threads;i++)
-                {
-                        printf("Thread %d\n",i);
-                        for(int j=0;j<buck[i].size();j++)
-                        {
-                                std::cout << buck[i].at(j) << "\n\n";
-                        }
-                        printf("BUCKET %d ");
-                        std::cout << &buck[i].front() << "\n\n";
-
-                }
 #endif
 
-		
-/*
-		printf("ARRAY AFTER SORTING\n");
-		for(int i=0;i<count;i++)
-		{
-			printf("%d ",array[i]);
-		}
-		printf("\n");
-*/
-/*
-		for(int i=0;i<num_of_threads;i++)
-		{
-			int *bucket_ptr = (int *)&bucket[i].front();
-			quick_sort(bucket_ptr,0,bucket[i].size()-1);
-			print(bucket[i]);
-		}
-
-*/
-/*
-
-		for(int i=0;i<num_of_threads;i++)
-		{
-
-			//printf("Address %d = %x\n",i,bucket+i);
-
-			//int *bucket = (int *)malloc((sizeof(int)*count));
-			//printf("BUCKET %d ADDRESS = %x\n",i,bucket);
-			//base_address_of_buckets[i] = bucket;
-			//printf("Base address of bucket %d is %x\n",i,base_address_of_buckets[i]);
-
-		}
-*/
-
-
-
+		/* Open file to store sorted array */
 		output_file_ptr = fopen(output_file,"w+");
-        for(int i = 0; i < num_of_threads/*buck[thread_part].size()*/; i++)
-        {
-                for(int j=0;j< buck[i].size();j++)
-                {
-                        fprintf(output_file_ptr,"%d\n",buck[i][j]);
-                }
-                //fprintf(output_file_ptr,"%d\n", *(&buck[thread_part].front()+i));
-        }
-        fclose(output_file_ptr);
+
+		/* Write all sorted buckets in the file */
+		for(int i = 0; i < num_of_threads; i++)
+		{
+			for(int j=0;j< buck[i].size();j++)
+			{
+				fprintf(output_file_ptr,"%d\n",buck[i][j]);
+			}
+		}
+
+		/* Close file */
+		fclose(output_file_ptr);
 
 
 		/* Calculate time elapsed */
@@ -847,10 +764,7 @@ int main(int argc, char *argv[])
 		printf("Elapsed (ns): %llu\n",elapsed_ns);
 		double elapsed_s = ((double)elapsed_ns)/1000000000.0;
 		printf("Elapsed (s): %lf\n",elapsed_s);
-
-
 	}
 
-	pthread_mutex_destroy(&lock);
-
+	pthread_mutex_destroy(&lock);		//destroyt mutex
 }

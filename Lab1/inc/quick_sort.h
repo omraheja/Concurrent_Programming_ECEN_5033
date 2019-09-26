@@ -4,7 +4,7 @@
 /*@Author       : Om Raheja
  *@File Name    : quick_sort.h
  *@Date         : 9/2/2019
- *@Tools        : Compiler:gcc ; Editor: Vim
+ *@Tools        : Compiler: g++ ; Editor: Vim
  */
 
 /* Standard C Library Header */

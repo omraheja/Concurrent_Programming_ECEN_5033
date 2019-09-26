@@ -1,7 +1,7 @@
 /*@Author       : Om Raheja
  *@File Name    : print_in_file.c 
  *@Date         : 9/2/2019 
- *@Tools        : Compiler:gcc ; Editor: Vim
+ *@Tools        : Compiler: g++ ; Editor: Vim
  */
 
 

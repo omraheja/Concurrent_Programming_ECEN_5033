@@ -26,4 +26,3 @@ bucket_sort.o:bucket_sort.c
 
 clean:
 	rm *.o mysort
-
