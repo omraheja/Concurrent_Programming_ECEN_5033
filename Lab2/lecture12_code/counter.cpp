@@ -17,6 +17,10 @@ int TEST_NUM = 0;		//stores which function to invoke
 int counter=0;			//variable to be incremented by each thread
 char output_file_name[20];	//stores output file name
 char input_file_name[20];	//stores input file name
+pthread_t* threads;		//pthreads
+size_t* args;
+pthread_barrier_t bar;		//pthread barrier
+thread_local int local_cnt;
 
 
 atomic<int> atomic_counter;
@@ -27,9 +31,6 @@ struct timespec start, end;	//stores start time and end time
 /* Synchronization variables */                                                                                                                                                                          
 pthread_mutex_t lock;
 atomic<bool> tas_lock;
-
-
-
 
 
 /* Function Prototypes */
@@ -44,6 +45,9 @@ void cnt_array(int);
 void cnt_array_padded(int);
 void cnt_thread_local(int);
 void cnt_stack(int);
+void local_init(int tid);
+void local_cleanup();
+
 
 
 void empty(int tid)
@@ -128,6 +132,55 @@ const char* func_names[NUM_FUNCS] = {
 };
 
 
+void* thread_main(void* args)
+{
+	size_t tid = *((size_t*)args);
+	void (*test)(int) = funcs[TEST_NUM];
+
+	local_init(tid);
+	pthread_barrier_wait(&bar);
+	if(tid==1)
+	{
+		clock_gettime(CLOCK_MONOTONIC,&start);
+	}
+	pthread_barrier_wait(&bar);
+	test(tid);
+	pthread_barrier_wait(&bar);
+	if(tid==1)
+	{
+		clock_gettime(CLOCK_MONOTONIC,&end);
+	}
+	local_cleanup();
+
+	return 0;
+}
+
+
+void global_init(){
+	threads = (pthread_t*) malloc(NUM_THREADS*sizeof(pthread_t));
+	args = (size_t*) malloc(NUM_THREADS*sizeof(size_t));
+	pthread_barrier_init(&bar, NULL, NUM_THREADS);
+	counter = 0;
+	atomic_counter.store(0);
+
+	pthread_mutex_init(&lock,NULL);
+	tas_lock.store(false);
+}
+void global_cleanup(){
+	if(atomic_counter.load()!=0){counter = atomic_counter.load();}
+
+	printf("Counter:%d\n",counter);
+
+	free(threads);
+	free(args);
+	pthread_barrier_destroy(&bar);
+	pthread_mutex_destroy(&lock);
+}
+
+void local_init(int tid){
+	local_cnt=0;
+}
+void local_cleanup(){}
 
 
 
@@ -136,7 +189,7 @@ int main(int argc, char *argv[])
 {
 	int option_index = 0;
 	int opt;
-	int ret;		//to check return status
+	//int ret;		//to check return status
 	char lock_selected[10];	//to store lock selected
 	bool b = false;
 	bool l = false;
@@ -151,7 +204,7 @@ int main(int argc, char *argv[])
 		{ 0, 0, 0, 0}
 	};
 
-	char optstring[25] = "no:t:i:bar:lock:";
+	char optstring[25] = "no:t:i=:bar:lock:";
 
 	while((opt = getopt_long(argc, argv, optstring, long_options, &option_index))!= -1)
 	{
@@ -229,6 +282,41 @@ int main(int argc, char *argv[])
 				break;
 		}
 	}
+
+
+	global_init();
+
+	// launch threads
+	int ret; size_t i;
+	for(i=1; i<NUM_THREADS; i++){
+		args[i]=i+1;
+		//printf("creating thread %zu\n",args[i]);
+		ret = pthread_create(&threads[i], NULL, &thread_main, &args[i]);
+		if(ret){
+			printf("ERROR; pthread_create: %d\n", ret);
+			exit(-1);
+		}
+	}
+	i = 1;
+	thread_main(&i); // master also calls thread_main
+
+	// join threads
+	for(size_t i=1; i<NUM_THREADS; i++){
+		ret = pthread_join(threads[i],NULL);
+		if(ret){
+			printf("ERROR; pthread_join: %d\n", ret);
+			exit(-1);
+		}
+		//printf("joined thread %zu\n",i+1);
+	}
+
+	global_cleanup();
+
+	unsigned long long elapsed_ns;
+	elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
+	printf("Elapsed (ns): %llu\n",elapsed_ns);
+	double elapsed_s = ((double)elapsed_ns)/1000000000.0;
+	printf("Elapsed (s): %lf\n",elapsed_s);
 
 	return 0;
 }
