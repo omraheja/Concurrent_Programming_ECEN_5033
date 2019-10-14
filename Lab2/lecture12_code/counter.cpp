@@ -58,6 +58,40 @@ void local_cleanup();
 
 
 
+#if 0
+class Barrier{
+	atomic<int> cnt=0;
+	atomic<int> sense=0;
+	int N = NUM_THREADS;
+}
+
+void Barrier::wait()
+{
+	thread_local bool my_sense = 0;
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void empty(int tid)
 {
 }
@@ -125,12 +159,14 @@ void ticket_unlock()
 void cnt_ticket_lock(int tid)
 {
 	//printf("Ticket lock to be implemented\n");
-	ticket_lock();
+	//ticket_lock();
 	for(int i=0;i<NUM_ITERATIONS;i++)
 	{
+		ticket_lock();
 		counter++;
+		ticket_unlock();
 	}
-	ticket_unlock();
+	//ticket_unlock();
 }
 
 void cnt_mcs_lock(int tid)
@@ -140,7 +176,31 @@ void cnt_mcs_lock(int tid)
 }
 
 
-const int NUM_FUNCS = 7;
+void cnt_pthread_barrier(int tid)
+{
+	for(int i=0;i<NUM_ITERATIONS*NUM_THREADS;i++)
+	{
+		//printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
+		if((i%NUM_THREADS==tid-1))
+		{
+			counter++;
+			//printf("Counter = %d\t TID=%d\n",counter,tid);
+		}
+		pthread_barrier_wait(&bar);	
+	}
+}
+
+
+
+
+void cnt_sense_rev_barrier(int tid)
+{
+	printf("Sense reversal barrier to be implemented\n");
+}
+
+
+
+const int NUM_FUNCS = 9;
 void (*funcs[NUM_FUNCS])(int)  = {
 	empty,				//0 -> empty
 	print,				//1 -> print
@@ -148,7 +208,9 @@ void (*funcs[NUM_FUNCS])(int)  = {
 	cnt_tas_lock,			//3 -> test and set lock
 	cnt_test_and_tas_lock,		//4 -> test and test and set lock
 	cnt_ticket_lock,		//5 -> ticket lock
-	cnt_mcs_lock			//6 -> mcs lock
+	cnt_mcs_lock,			//6 -> mcs lock
+	cnt_pthread_barrier,		//7 -> pthread_barrier
+	cnt_sense_rev_barrier		//8 -> sense reversal barrier
 };
 
 const char* func_names[NUM_FUNCS] = {
@@ -158,7 +220,9 @@ const char* func_names[NUM_FUNCS] = {
 	"cnt_tas_lock",
 	"cnt_test_and_tas_lock",
 	"cnt_ticket_lock",
-	"cnt_mcs_lock"
+	"cnt_mcs_lock",
+	"cnt_pthread_barrier",
+	"cnt_sense_rev_barrier"
 };
 
 
@@ -221,6 +285,7 @@ int main(int argc, char *argv[])
 	int opt;
 	//int ret;		//to check return status
 	char lock_selected[10];	//to store lock selected
+	char bar_selected[25];	//to store barrier selected
 	bool b = false;
 	bool l = false;
 
@@ -270,7 +335,17 @@ int main(int argc, char *argv[])
 				if((b == false) && (l == false))
 				{
 					b = true;
-					printf("Barrier selected = %s\n",optarg);
+					//printf("Barrier selected = %s\n",optarg);
+					strcpy(bar_selected,optarg);                   //copy lock selected
+                                        if(!strcmp(bar_selected,"pthread"))              //empty
+                                        {
+                                                TEST_NUM = 7;
+                                        }
+                                        else if(!strcmp(lock_selected,"sense_rev"))         //print
+                                        {
+                                                TEST_NUM = 8;
+                                        }
+					printf("Barrier selected = %s\n",func_names[TEST_NUM]);
 				}
 				break;
 
