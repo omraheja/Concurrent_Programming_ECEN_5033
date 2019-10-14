@@ -6,4 +6,4 @@ test: counter.cpp
 
 .PHONY : clean
 clean:
-	rm counter
+	rm counter out.txt

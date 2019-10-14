@@ -1,3 +1,9 @@
+
+/*
+ *@References: en.cppreference.com/w/cpp/atomic/atomic_fetch_add
+ * */
+
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -32,6 +38,8 @@ struct timespec start, end;	//stores start time and end time
 pthread_mutex_t lock;
 atomic<bool> tas_lock;
 
+atomic<int> next_num;
+atomic<int> now_serving;
 
 /* Function Prototypes */
 void empty(int);
@@ -98,9 +106,31 @@ void cnt_test_and_tas_lock(int tid)
 	}
 }
 
+
+
+void ticket_lock()
+{
+	int my_num = std::atomic_fetch_add(&next_num,1);
+	//int my_num = next_num.fai(1);
+	while(now_serving.load() != my_num){}
+}
+
+void ticket_unlock()
+{
+	std::atomic_fetch_add(&now_serving,1);
+	//now_serving.fai(1);
+}
+
+
 void cnt_ticket_lock(int tid)
 {
-	printf("Ticket lock to be implemented\n");
+	//printf("Ticket lock to be implemented\n");
+	ticket_lock();
+	for(int i=0;i<NUM_ITERATIONS;i++)
+	{
+		counter++;
+	}
+	ticket_unlock();
 }
 
 void cnt_mcs_lock(int tid)
@@ -198,13 +228,14 @@ int main(int argc, char *argv[])
 		{ "name", no_argument, NULL,'n'},
 		{ "output",required_argument, NULL,'o'},
 		{ "threads",required_argument,NULL,'t' },
-		{ "iterations",required_argument,NULL,'i'},
+		{ "iterations=",required_argument,NULL,'i'},
 		{ "bar",required_argument,NULL,'b'},
 		{ "lock",required_argument,NULL,'l'},
 		{ 0, 0, 0, 0}
 	};
 
-	char optstring[25] = "no:t:i=:bar:lock:";
+	char *optstring = "no:t:i:bar:lock:";
+
 
 	while((opt = getopt_long(argc, argv, optstring, long_options, &option_index))!= -1)
 	{
@@ -229,8 +260,9 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'i':
-				NUM_ITERATIONS = atoi(optarg);
+				NUM_ITERATIONS = atoi((optarg+1));
 				printf("Number of iterations: %d\n",NUM_ITERATIONS);
+
 				break;
 
 			case 'b':
@@ -311,6 +343,12 @@ int main(int argc, char *argv[])
 	}
 
 	global_cleanup();
+
+	/* Write Total iterations in a file */
+	FILE *fptr;
+	fptr = fopen(output_file_name,"w+");
+	fprintf(fptr,"%d\n",counter);
+	fclose(fptr);
 
 	unsigned long long elapsed_ns;
 	elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
