@@ -14,6 +14,8 @@
 #include <string.h>
 #include <getopt.h>
 
+#define RELAXED std::memory_order_relaxed
+
 using namespace std;
 
 /* Global variables */
@@ -41,7 +43,13 @@ atomic<bool> tas_lock;
 atomic<int> next_num;
 atomic<int> now_serving;
 
+atomic<int> cnt;
+atomic<int> sense;
+
+
+
 /* Function Prototypes */
+
 void empty(int);
 void print(int);
 void cnt_lock(int);
@@ -55,40 +63,38 @@ void cnt_thread_local(int);
 void cnt_stack(int);
 void local_init(int tid);
 void local_cleanup();
+void wait();
 
 
 
-#if 0
-class Barrier{
-	atomic<int> cnt=0;
-	atomic<int> sense=0;
-	int N = NUM_THREADS;
-}
-
-void Barrier::wait()
+void wait()
 {
 	thread_local bool my_sense = 0;
+	if(my_sense == 0)
+	{
+		my_sense = 1;	//Flip sense
+	}
+	else
+	{
+		my_sense = 0;
+	}
+
+
+	int cnt_cpy;
+	cnt_cpy = std::atomic_fetch_add(&cnt,1);
+
+	//	cnt_cpy = cnt.fetch_add(1);
+
+	if(cnt_cpy == NUM_THREADS)	//Last thread to arrive
+	{
+		cnt.store(1,RELAXED);
+		sense.store(my_sense);
+	}
+	else		//not the last
+	{
+		while(sense.load() !=my_sense){}
+	}
 }
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -184,9 +190,10 @@ void cnt_pthread_barrier(int tid)
 		if((i%NUM_THREADS==tid-1))
 		{
 			counter++;
-			//printf("Counter = %d\t TID=%d\n",counter,tid);
+			printf("Counter = %d\t TID=%d\n",counter,tid);
 		}
 		pthread_barrier_wait(&bar);	
+
 	}
 }
 
@@ -195,7 +202,18 @@ void cnt_pthread_barrier(int tid)
 
 void cnt_sense_rev_barrier(int tid)
 {
-	printf("Sense reversal barrier to be implemented\n");
+
+	for(int i=0;i<NUM_ITERATIONS*NUM_THREADS;i++)
+        {
+                //printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
+                if((i%NUM_THREADS==tid-1))
+                {
+                        counter++;
+                        printf("Counter = %d\t TID=%d\n",counter,tid);
+                }
+		wait();
+        }
+
 }
 
 
@@ -289,6 +307,8 @@ int main(int argc, char *argv[])
 	bool b = false;
 	bool l = false;
 
+	cnt=1;
+
 	struct option long_options[] = {
 		{ "name", no_argument, NULL,'n'},
 		{ "output",required_argument, NULL,'o'},
@@ -335,16 +355,15 @@ int main(int argc, char *argv[])
 				if((b == false) && (l == false))
 				{
 					b = true;
-					//printf("Barrier selected = %s\n",optarg);
-					strcpy(bar_selected,optarg);                   //copy lock selected
-                                        if(!strcmp(bar_selected,"pthread"))              //empty
-                                        {
-                                                TEST_NUM = 7;
-                                        }
-                                        else if(!strcmp(lock_selected,"sense_rev"))         //print
-                                        {
-                                                TEST_NUM = 8;
-                                        }
+					strcpy(bar_selected,optarg);		//copy barrier selected
+					if(!strcmp(bar_selected,"pthread"))	//pthread barrier
+					{
+						TEST_NUM = 7;
+					}
+					else if(!strcmp(bar_selected,"sense"))	//sense reversal barrier
+					{
+						TEST_NUM = 8;
+					}
 					printf("Barrier selected = %s\n",func_names[TEST_NUM]);
 				}
 				break;
