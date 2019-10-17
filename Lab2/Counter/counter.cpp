@@ -1,9 +1,19 @@
+/*@Author       : Om Raheja
+ *@File Name    : counter.c 
+ *@Date         : 10/16/2019
+ *@Tools        : Compiler: g++ ; Editor: Vim
+ *@Course       : Concurrent Programming ECEN 5033
+ *@References   : References for C++ syntax and concepts were taken from geeksforgeeks
+ *              : Base code was taken as reference from Professor Joe's materials 
+ *                provided in class
+ *              : MCS Lock code was referneced from Professor Joe's materials
+ *                provided in class
+ *              : en.cppreference.com/w/cpp/atomic/atomic_fetch_add
+ */
 
-/*
- *@References: en.cppreference.com/w/cpp/atomic/atomic_fetch_add
- * */
 
 
+/* Standard C Library Headers */
 #include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -14,9 +24,13 @@
 #include <string.h>
 #include <getopt.h>
 
+
+/* Macros */
 #define RELAXED std::memory_order_relaxed
 
+
 using namespace std;
+
 
 /* Global variables */
 int NUM_THREADS;		//stores number of threads
@@ -26,30 +40,24 @@ int counter=0;			//variable to be incremented by each thread
 char output_file_name[20];	//stores output file name
 char input_file_name[20];	//stores input file name
 pthread_t* threads;		//pthreads
-size_t* args;
+size_t* args;			//value to be passed to each thread
 pthread_barrier_t bar;		//pthread barrier
-thread_local int local_cnt;
+thread_local int local_cnt;	//thread local variable
 
-
-atomic<int> atomic_counter;
+atomic<int> atomic_counter;	//atomic counter
 struct timespec start, end;	//stores start time and end time
 
 
-
 /* Synchronization variables */                                                                                                                                                                          
-pthread_mutex_t lock;
-atomic<bool> tas_lock;
-
-atomic<int> next_num;
-atomic<int> now_serving;
-
-atomic<int> cnt;
-atomic<int> sense;
-
+pthread_mutex_t lock;		//pthread lock
+atomic<bool> tas_lock;		//Test and set lock
+atomic<int> next_num;		//Variable for ticket lock
+atomic<int> now_serving;	//Current thread in execution
+atomic<int> cnt;		//count
+atomic<int> sense;		//sense for sense reversal barrier
 
 
 /* Function Prototypes */
-
 void empty(int);
 void print(int);
 void cnt_lock(int);
@@ -66,19 +74,20 @@ void local_cleanup();
 void wait();
 
 
-/* Class */
+/* Class Node */
 class Node{
 	public:
 		std::atomic<Node*> next;
 		std::atomic<bool> wait;
 };
 
-
+/* Object of class Node */
 std::atomic<Node*> tail{NULL};
 
+/* Class MCSLock */
 class MCSLock{
 	public:
-		void acquire(Node* myNode)
+		void acquire(Node* myNode)			//Acquire lock
 		{
 			Node* oldTail = tail.load();
 			myNode->next.store(NULL);
@@ -95,7 +104,7 @@ class MCSLock{
 			}
 		}
 
-		void release(Node* myNode)
+		void release(Node* myNode)			//Release lock
 		{
 			Node* temp = myNode;
 			if(tail.compare_exchange_strong(temp,NULL))
@@ -110,8 +119,11 @@ class MCSLock{
 		}
 };
 
+/* Object of class MCSLock */
 MCSLock mcs_lock;
 
+
+/* sense reversal barrier implementation */
 void wait()
 {
 	thread_local bool my_sense = 0;
@@ -128,8 +140,6 @@ void wait()
 	int cnt_cpy;
 	cnt_cpy = std::atomic_fetch_add(&cnt,1);
 
-	//	cnt_cpy = cnt.fetch_add(1);
-
 	if(cnt_cpy == NUM_THREADS)	//Last thread to arrive
 	{
 		cnt.store(1,RELAXED);
@@ -142,26 +152,30 @@ void wait()
 }
 
 
-
+/* Empty */
 void empty(int tid)
 {
 }
 
+
+/* Print thread number */
 void print(int tid)
 {
 	printf("Thread %d reporting for duty.\n",tid);
 }
 
+/* Pthread mutex lock */
 void cnt_lock(int tid)
 {
 	for(int i = 0; i<NUM_ITERATIONS; i++)
 	{
-		pthread_mutex_lock(&lock);
-		counter++;
-		pthread_mutex_unlock(&lock);
+		pthread_mutex_lock(&lock);		//acquire lock
+		counter++;				//increment counter
+		pthread_mutex_unlock(&lock);		//release lock
 	}
 }
 
+/* Test and Set Lock */
 void cnt_tas_lock(int tid)
 {
 	bool expected, changed;
@@ -171,12 +185,13 @@ void cnt_tas_lock(int tid)
 		{
 			expected = false;
 			changed = true;
-		}while(!tas_lock.compare_exchange_strong(expected,changed));
-		counter++;
-		tas_lock.store(false);
+		}while(!tas_lock.compare_exchange_strong(expected,changed));		//lock acquired
+		counter++;								//increment counter
+		tas_lock.store(false);							//lock released
 	}
 }
 
+/* Test and Test and set Lock */
 void cnt_test_and_tas_lock(int tid)
 {
 	bool expected, changed;
@@ -185,91 +200,83 @@ void cnt_test_and_tas_lock(int tid)
 		do{
 			expected = false;
 			changed = true;
-		}while(tas_lock.load()==true || !tas_lock.compare_exchange_strong(expected,changed));
-		counter++;
-		tas_lock.store(false);
+		}while(tas_lock.load()==true || !tas_lock.compare_exchange_strong(expected,changed));	//lock acquired
+		counter++;										//increment counter
+		tas_lock.store(false);									//lock released
 	}
 }
 
-
-
+/* Ticket lock */
 void ticket_lock()
 {
 	int my_num = std::atomic_fetch_add(&next_num,1);
-	//int my_num = next_num.fai(1);
 	while(now_serving.load() != my_num){}
 }
 
+
+/* Ticket unlock */
 void ticket_unlock()
 {
 	std::atomic_fetch_add(&now_serving,1);
-	//now_serving.fai(1);
 }
 
-
+/* Ticket lock call back function  */
 void cnt_ticket_lock(int tid)
 {
-	//printf("Ticket lock to be implemented\n");
-	//ticket_lock();
 	for(int i=0;i<NUM_ITERATIONS;i++)
 	{
-		ticket_lock();
-		counter++;
-		ticket_unlock();
+		ticket_lock();		//acquire lock
+		counter++;		//increment counter
+		ticket_unlock();	//release lock
 	}
-	//ticket_unlock();
 }
 
+/* MCS Lock */
 void cnt_mcs_lock(int tid)
 {
 	for(int i=0;i<NUM_ITERATIONS;i++)
 	{
 		Node* my_node = new Node;
-		mcs_lock.acquire(my_node);
-		counter++;
-		printf("Counter =%d\n",counter);
-		mcs_lock.release(my_node);
+		mcs_lock.acquire(my_node);	//acquire lock
+		counter++;			//increment counter 
+		mcs_lock.release(my_node);	//release lock
 	}
 }
 
-
+/* Pthreads barrier */
 void cnt_pthread_barrier(int tid)
 {
 	for(int i=0;i<NUM_ITERATIONS*NUM_THREADS;i++)
 	{
-		//printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
 		if((i%NUM_THREADS==tid-1))
 		{
 			counter++;
-			printf("Counter = %d\t TID=%d\n",counter,tid);
+			//printf("Counter = %d\t TID=%d\n",counter,tid);
 		}
-		pthread_barrier_wait(&bar);	
+		pthread_barrier_wait(&bar);		//wait for all threads to arrive at this instruction
 
 	}
 }
 
 
-
-
+/* Sense reversal Barrier */
 void cnt_sense_rev_barrier(int tid)
 {
-
 	for(int i=0;i<NUM_ITERATIONS*NUM_THREADS;i++)
 	{
 		//printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
 		if((i%NUM_THREADS==tid-1))
 		{
 			counter++;
-			printf("Counter = %d\t TID=%d\n",counter,tid);
+			//printf("Counter = %d\t TID=%d\n",counter,tid);
 		}
-		wait();
+		wait();					//wait for all threads to arrive at this instruction
 	}
-
 }
 
 
 
-const int NUM_FUNCS = 9;
+const int NUM_FUNCS = 9;		//count of functions
 void (*funcs[NUM_FUNCS])(int)  = {
 	empty,				//0 -> empty
 	print,				//1 -> print
@@ -294,7 +301,7 @@ const char* func_names[NUM_FUNCS] = {
 	"cnt_sense_rev_barrier"
 };
 
-
+/* Thread entry point */
 void* thread_main(void* args)
 {
 	size_t tid = *((size_t*)args);
@@ -318,7 +325,7 @@ void* thread_main(void* args)
 	return 0;
 }
 
-
+/* Global init */
 void global_init(){
 	threads = (pthread_t*) malloc(NUM_THREADS*sizeof(pthread_t));
 	args = (size_t*) malloc(NUM_THREADS*sizeof(size_t));
@@ -329,6 +336,8 @@ void global_init(){
 	pthread_mutex_init(&lock,NULL);
 	tas_lock.store(false);
 }
+
+/* Global cleanup */
 void global_cleanup(){
 	if(atomic_counter.load()!=0){counter = atomic_counter.load();}
 
@@ -340,9 +349,13 @@ void global_cleanup(){
 	pthread_mutex_destroy(&lock);
 }
 
+
+/* Local init */
 void local_init(int tid){
 	local_cnt=0;
 }
+
+/* Local cleanup */
 void local_cleanup(){}
 
 
