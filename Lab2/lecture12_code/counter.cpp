@@ -66,6 +66,51 @@ void local_cleanup();
 void wait();
 
 
+/* Class */
+class Node{
+	public:
+		std::atomic<Node*> next;
+		std::atomic<bool> wait;
+};
+
+
+std::atomic<Node*> tail{NULL};
+
+class MCSLock{
+	public:
+		void acquire(Node* myNode)
+		{
+			Node* oldTail = tail.load();
+			myNode->next.store(NULL);
+			while(!tail.compare_exchange_strong(oldTail,myNode))
+			{
+				oldTail = tail.load();
+			}
+
+			if(oldTail != NULL)
+			{
+				myNode->wait.store(true);
+				oldTail->next.store(myNode);
+				while(myNode->wait.load()){}
+			}
+		}
+
+		void release(Node* myNode)
+		{
+			Node* temp = myNode;
+			if(tail.compare_exchange_strong(temp,NULL))
+			{
+				//no one is waiting, and we just freed the lock
+			}
+			else	//hand lock to next waiting thread
+			{
+				while(myNode->next.load() == NULL){}
+				myNode->next.load()->wait.store(false);
+			}
+		}
+};
+
+MCSLock mcs_lock;
 
 void wait()
 {
@@ -177,8 +222,14 @@ void cnt_ticket_lock(int tid)
 
 void cnt_mcs_lock(int tid)
 {
-
-	printf("MCS lock to be implemented\n");
+	for(int i=0;i<NUM_ITERATIONS;i++)
+	{
+		Node* my_node = new Node;
+		mcs_lock.acquire(my_node);
+		counter++;
+		printf("Counter =%d\n",counter);
+		mcs_lock.release(my_node);
+	}
 }
 
 
@@ -204,15 +255,15 @@ void cnt_sense_rev_barrier(int tid)
 {
 
 	for(int i=0;i<NUM_ITERATIONS*NUM_THREADS;i++)
-        {
-                //printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
-                if((i%NUM_THREADS==tid-1))
-                {
-                        counter++;
-                        printf("Counter = %d\t TID=%d\n",counter,tid);
-                }
+	{
+		//printf("i=%d\tNUM_THREADS=%d\ttid=%d\n",i,NUM_THREADS,tid);
+		if((i%NUM_THREADS==tid-1))
+		{
+			counter++;
+			printf("Counter = %d\t TID=%d\n",counter,tid);
+		}
 		wait();
-        }
+	}
 
 }
 

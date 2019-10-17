@@ -37,6 +37,7 @@
 #include "../inc/print_in_file.h"
 #include "../inc/bucket_sort.h"
 #include "../inc/sense_reversal_barrier.h"
+#include "../inc/locks.h"
 
 /* Defines */
 #define MAX_THREADS	(10000)
@@ -93,12 +94,15 @@ char output_file[20];		//variable to store output file name
 std::atomic<int> cnt;
 std::atomic<int> sense;
 
+/* Locks implementation variables */
+MCSLock mcs_lock;
 
 
 char lock_selected[10];	//to store lock selected
 char bar_selected[25];	//to store barrier selected
 
 
+std::atomic<Node*> tail{NULL};
 
 
 
@@ -202,20 +206,20 @@ void *thread_main(void *args)
 		clock_gettime(CLOCK_MONOTONIC,&start);
 	}
 
-	
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }	
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
-	
+
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}	
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
+
 
 
 #if DEBUG
@@ -260,18 +264,18 @@ void *thread_main(void *args)
 	printf("Thread %zu: %d ; Thread_Part = %d\n",tid,i++,thread_part);
 	printf("Thread %zu reporting for duty\n",tid);
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 	if(tid==1)
@@ -293,18 +297,21 @@ void *bucket_main(void *args)
 
 	int low,high;			//Variables for index tracking
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+
+	Node* my_node = new Node;
+
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 
@@ -315,18 +322,18 @@ void *bucket_main(void *args)
 		clock_gettime(CLOCK_MONOTONIC,&start);			//Start the timer to measure time taken by algorithm
 	}
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 	elem_per_thread = count/num_of_threads;		//Number of elements per thread
@@ -353,18 +360,18 @@ void *bucket_main(void *args)
 	printf("THREAD_PART = %d\t NUM_OF_ELEM_SORTED = %d\t LOW = %d\t HIGH = %d\n",thread_part,high-low+1,low,high);
 #endif
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 	int high_temp;	//for sorting the array of higher indices
@@ -415,42 +422,94 @@ void *bucket_main(void *args)
 #endif
 
 
-	pthread_mutex_lock(&lock);		//Lock before inserting elements in the bucket
+	if(!strcmp(lock_selected,"pthread"))
+	{
+		pthread_mutex_lock(&lock);
+		printf("Pthread mutex locked!\n");
+	}
+	else if(!strcmp(lock_selected,"tas"))
+	{
+		cnt_tas_lock();
+		printf("TAS locked!\n");
+	}
+	else if(!strcmp(lock_selected,"ttas"))
+	{
+		test_and_tas_lock();
+		printf("TTAS locked!\n");
+	}
+	else if(!strcmp(lock_selected,"ticket"))
+	{
+		ticket_lock();
+		printf("Ticket locked!\n");
+	}
+	else if(!strcmp(lock_selected,"mcs"))
+	{
+
+		mcs_lock.acquire(my_node);
+		printf("MCS locked!\n");
+	}
+	//pthread_mutex_lock(&lock);		//Lock before inserting elements in the bucket
 
 	bucket_insert(array_base_addr,low,high,thread_part);		//Insert elements in appropriate buckets
 
-	pthread_mutex_unlock(&lock);		//Unlock after insertion of elements in bucket is over
+	//pthread_mutex_unlock(&lock);		//Unlock after insertion of elements in bucket is over
+
+	if(!strcmp(lock_selected,"pthread"))
+	{
+		pthread_mutex_unlock(&lock);
+		printf("Pthread mutex Unlocked!\n");
+	}
+	else if(!strcmp(lock_selected,"tas"))
+	{
+		cnt_tas_unlock();
+		printf("TAS unlocked!\n");
+	}
+	else if(!strcmp(lock_selected,"ttas"))
+	{
+		test_and_tas_unlock();
+		printf("TTAS unlocked!\n");
+	}
+	else if(!strcmp(lock_selected,"ticket"))
+	{
+		ticket_unlock();
+		printf("Ticket unlocked!\n");
+	}
+	else if(!strcmp(lock_selected,"mcs"))
+	{
+		mcs_lock.release(my_node);
+		printf("MCS unlocked!\n");
+	}
 
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense seversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense seversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 	/* Sort the buckets  */
 	quick_sort(&buck[thread_part].front(),0,buck[thread_part].size()-1);
 
-	 if(!strcmp(bar_selected,"pthread"))
-        {
-                pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
-        }
-        else if(!strcmp(bar_selected,"sense"))
-        {
-                sense_rev_bar();		//sense reversal barrier
-        }
-	 else
-	 {
-		 pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
-	 }
+	if(!strcmp(bar_selected,"pthread"))
+	{
+		pthread_barrier_wait(&bar);     //wait for all threads to arrive at this point
+	}
+	else if(!strcmp(bar_selected,"sense"))
+	{
+		sense_rev_bar();		//sense reversal barrier
+	}
+	else
+	{
+		pthread_barrier_wait(&bar);     //default case when no --bar flag is specified
+	}
 
 
 #if 0	
@@ -540,6 +599,11 @@ int main(int argc, char *argv[])
 			case 'b':
 				strcpy(bar_selected,optarg);
 				printf("Barrier selected: %s\n",bar_selected);
+				break;
+
+			case 'l':
+				strcpy(lock_selected,optarg);
+				printf("Lock Selected: %s\n",lock_selected);
 				break;
 
 

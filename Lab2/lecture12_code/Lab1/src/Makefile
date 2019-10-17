@@ -4,7 +4,7 @@ CC=g++
 
 CFLAGS = -Wall -pthread -g
 
-OBJ = mysort.o print_on_console.o quick_sort.o print_in_file.o bucket_sort.o sense_reversal_barrier.o
+OBJ = mysort.o print_on_console.o quick_sort.o print_in_file.o bucket_sort.o sense_reversal_barrier.o locks.o
 
 mysort:$(OBJ)
 	$(CC) $(CFLAGS) -o mysort $(OBJ)
@@ -27,5 +27,8 @@ bucket_sort.o:bucket_sort.c
 sense_reversal_barrier.o:sense_reversal_barrier.c
 	$(CC) $(CFLAGS) -c sense_reversal_barrier.c
 
+locks.o:locks.c
+	$(CC) $(CFLAGS) -c locks.c
+
 clean:
-	rm *.o mysort
+	rm *.o mysort output.txt
