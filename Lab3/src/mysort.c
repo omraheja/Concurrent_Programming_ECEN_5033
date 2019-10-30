@@ -130,7 +130,34 @@ int main(int argc, char *argv[])
 			int number_of_elements = sizeof(array)/sizeof(int);
 
 			/* Sort the array in ascending order using Quick Sort Algorithm */
-			quick_sort(array,0,number_of_elements - 1);
+//			quick_sort(array,0,number_of_elements - 1);
+
+/*************************************************************************************************************************/
+
+		int pivot = partition(array,0,number_of_elements - 1);
+
+                #pragma omp parallel sections
+                {
+                        printf("Number of threads = %d\n",omp_get_num_threads());
+                        #pragma omp section
+                        {
+                                /* Sort the array in ascending order using Quick Sort Algorithm */
+
+                                printf("Section 1 ID = %d\n",omp_get_thread_num());
+                                quick_sort(array,0,pivot - 1);
+
+                        }
+
+                        #pragma omp section
+                        {
+
+                                printf("Section 2 ID = %d\n",omp_get_thread_num());
+                                quick_sort(array, pivot + 1, number_of_elements - 1);
+
+                        }
+
+                }
+/************************************************************************************************************************/
 
 			/* Print Sorted Array on the output terminal */
 			print_on_console(array,(sizeof(array)/sizeof(int)));
