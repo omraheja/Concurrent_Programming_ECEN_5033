@@ -1,8 +1,14 @@
 /*@Author       : Om Raheja
  *@File Name    : mysort.c 
- *@Date         : 9/2/2019 
+ *@Date         : 11/1/2019 
  *@Tools        : Compiler:gcc ; Editor: Vim
  *@References	: The concept for Quick Sort Algorithm was referenced from https://www.youtube.com/watch?v=3DV8GO9g7B4
+		: This article gives a brief analysis for using openMP to parallelise quick sort
+ 		  [https://pushkar2196.wordpress.com/2017/02/26/quicksort/}
+ 		: The youtube series by Tim Mattson was really helpful to understand the OpenMP Library
+ 		  [https://www.youtube.com/watch?v=nE-xN4Bf8XI&list=PLLX-Q6B8xqZ8n8bwjGdzBJ25X2utwnoEG]
+ 		: Lastly, this code was reused from Lab0(implementation of quick sort) and openMP Library
+ 		  was then used to parallelise it.
  */
 
 /* Standard C Library Headers */
@@ -129,35 +135,34 @@ int main(int argc, char *argv[])
 			/* Calculate the number of elements in the array */
 			int number_of_elements = sizeof(array)/sizeof(int);
 
+
+			/***************************************************************************************************************************/
 			/* Sort the array in ascending order using Quick Sort Algorithm */
-//			quick_sort(array,0,number_of_elements - 1);
 
-/*************************************************************************************************************************/
+			int pivot = partition(array,0,number_of_elements - 1);
 
-		int pivot = partition(array,0,number_of_elements - 1);
+			#pragma omp parallel sections
+			{
+				printf("Number of threads = %d\n",omp_get_num_threads());
+				#pragma omp section
+				{
+					/* Sort the array in ascending order using Quick Sort Algorithm */
 
-                #pragma omp parallel sections
-                {
-                        printf("Number of threads = %d\n",omp_get_num_threads());
-                        #pragma omp section
-                        {
-                                /* Sort the array in ascending order using Quick Sort Algorithm */
+					printf("Section 1 ID = %d\n",omp_get_thread_num());
+					quick_sort(array,0,pivot - 1);
 
-                                printf("Section 1 ID = %d\n",omp_get_thread_num());
-                                quick_sort(array,0,pivot - 1);
+				}
 
-                        }
+				#pragma omp section
+				{
 
-                        #pragma omp section
-                        {
+					printf("Section 2 ID = %d\n",omp_get_thread_num());
+					quick_sort(array, pivot + 1, number_of_elements - 1);
 
-                                printf("Section 2 ID = %d\n",omp_get_thread_num());
-                                quick_sort(array, pivot + 1, number_of_elements - 1);
+				}
 
-                        }
-
-                }
-/************************************************************************************************************************/
+			}
+			/************************************************************************************************************************/
 
 			/* Print Sorted Array on the output terminal */
 			print_on_console(array,(sizeof(array)/sizeof(int)));
@@ -177,11 +182,11 @@ int main(int argc, char *argv[])
 
 		/* Copy input file name in a variable */
 		strcpy(input_file,argv[optind]);
-		
+
 		/*
-		printf("Input File =  %s\n",input_file);
-		printf("Output File = %s\n",output_file);
-		*/
+		   printf("Input File =  %s\n",input_file);
+		   printf("Output File = %s\n",output_file);
+		   */
 
 		/*
 		   printf("0->%s\n",argv[0]);
@@ -189,7 +194,7 @@ int main(int argc, char *argv[])
 		   printf("2->%s\n",argv[2]);
 		   printf("3->%s\n",argv[3]);
 		   printf("4->%s\n",argv[4]);
-		 */
+		   */
 
 		FILE *fptr;			//File pointer
 
@@ -242,19 +247,18 @@ int main(int argc, char *argv[])
 		int number_of_elements = sizeof(array)/sizeof(int);
 
 
-//		int start = clock();	//start time
 		clock_gettime(CLOCK_MONOTONIC,&start);
 
-	
+/********************************************************************************************************************************/
+		/* Sort the array in ascending order using Quick Sort Algorithm */
 		int pivot = partition(array,0,number_of_elements - 1);
 
 		#pragma omp parallel sections
 		{
-			printf("Number of threads = %d\n",omp_get_num_threads());
 			#pragma omp section
 			{
 				/* Sort the array in ascending order using Quick Sort Algorithm */
-			
+
 				printf("Section 1 ID = %d\n",omp_get_thread_num());
 				quick_sort(array,0,pivot - 1);
 
@@ -262,14 +266,14 @@ int main(int argc, char *argv[])
 
 			#pragma omp section
 			{
-				
+
 				printf("Section 2 ID = %d\n",omp_get_thread_num());
 				quick_sort(array, pivot + 1, number_of_elements - 1);
 
 			}
 
 		}
-
+/********************************************************************************************************************************/
 
 		/* Check if the output file was mentioned */
 		if(output_file_flag ==1)
@@ -284,21 +288,15 @@ int main(int argc, char *argv[])
 			print_on_console(array,(sizeof(array)/sizeof(int)));
 
 		}
-//		int stop = clock();	//end time
+
 		clock_gettime(CLOCK_MONOTONIC,&end);
 
-//		printf("Time taken = %.6fs\n",(double)(stop-start)/CLOCKS_PER_SEC);
-
 		/* Calculate time elapsed */
-                unsigned long long elapsed_ns;
-                elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
-                printf("Elapsed (ns): %llu\n",elapsed_ns);
-                double elapsed_s = ((double)elapsed_ns)/1000000000.0;
-                printf("Elapsed (s): %lf\n",elapsed_s);
-
-
-		system("cmp --silent output.txt bucket_sorted.txt && echo 'Same!' || echo 'Different!'");
-
+		unsigned long long elapsed_ns;
+		elapsed_ns = (end.tv_sec-start.tv_sec)*1000000000 + (end.tv_nsec-start.tv_nsec);
+		printf("Elapsed (ns): %llu\n",elapsed_ns);
+		double elapsed_s = ((double)elapsed_ns)/1000000000.0;
+		printf("Elapsed (s): %lf\n",elapsed_s);
 	}
 
 	return 0;
