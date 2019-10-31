@@ -22,4 +22,4 @@ print_in_file.o:print_in_file.c
 	$(CC) $(CFLAGS) -c print_in_file.c
 
 clean:
-	rm *.o mysort output.txt
+	rm *.o mysort output.txt 
