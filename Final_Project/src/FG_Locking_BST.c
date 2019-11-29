@@ -1,15 +1,21 @@
+/* Standard C Library Header Files */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 
+
+/* User defined header files */
 #include "FG_Locking_BST.h"
 
-pthread_mutex_t tree_lock;
-FB_BST_Node *g_root = NULL;
 
-FG_BST_Node* create_new_node(int key,int value,FG_BST_Node* root)
+/* External Global variables */
+extern pthread_mutex_t tree_lock;
+extern FG_BST_Node *g_root;
+
+
+FG_BST_Node* create_new_node(int key,int value)
 {
 	printf("Creating New Node..........\n");
 
@@ -71,43 +77,63 @@ void insert(int key,int value,FG_BST_Node* root)
 		pthread_mutex_lock(&tree_lock);
 		if(g_root == NULL)
 		{
-			g_root = create_new_node(key,value,g_root);
+			g_root = create_new_node(key,value);
 			pthread_mutex_unlock(&tree_lock);
 			return;
 		}
+
 		pthread_mutex_lock(&g_root->lock);
 		root = g_root;
 		pthread_mutex_unlock(&tree_lock);
 	}
-
-	if(key < root->key)
+	
+	
+	if(key > root->key)
 	{
-		if(root->left == NULL)
-		{
-			root->left = create_new_node(key,value,root);
+                if(root->right == NULL)
+                {
+                        root->right = create_new_node(key,value);
 			pthread_mutex_unlock(&root->lock);
-		}
-		else
-		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
-		}
+                }
+                else
+                {
+                        pthread_mutex_lock(&root->right->lock);
+                        pthread_mutex_unlock(&root->lock);
+                        insert(key,value,root->right);
+                }
+
 	}
+	else if(key < root->key)
+        {
+                if(root->left == NULL)
+                {
+                        root->left = create_new_node(key,value);
+                        pthread_mutex_unlock(&root->lock);
+                }
+                else
+                {
+                        pthread_mutex_lock(&root->left->lock);
+                        pthread_mutex_unlock(&root->lock);
+                        insert(key,value,root->left);
+                }
+        }
 
-
-
-
-
+	else
+	{	
+		pthread_mutex_unlock(&root->lock);
+		printf("Duplicates Not Allowed\n");
+	}
 }
 
-void inorder_traversal(FG_BST_Node *root)
+
+void inorder_traversal(FG_BST_Node *g_root)
 {
-	if(root == NULL)
+	if(g_root == NULL)
 	{
 		return;
 	}
 
-	inorder_traversal(root->left);
-	printf("Key = %d   Value = %d\n",root->key,root->value);
-	inorder_traversal(root->right);
+	inorder_traversal(g_root->left);
+	printf("Key = %d   Value = %d\n",g_root->key,g_root->value);
+	inorder_traversal(g_root->right);
 }

@@ -1,8 +1,3 @@
-
-
-
-
-
 /* Standard C Library Headers */
 #include <stdio.h>
 #include <pthread.h>
@@ -17,9 +12,36 @@
 
 /* Global variables */
 pthread_mutex_t tree_lock;
+FG_BST_Node *g_root = NULL;
 
 
 
+size_t *args;
+
+void *thread_fun_1(void *args)
+{
+	size_t tid = *((size_t*)args);
+
+
+	insert(100,10,NULL);
+	insert(200,15,NULL);
+	insert(300,20,NULL);
+	insert(400,30,NULL);
+	insert(90,40,NULL);
+
+}
+
+void *thread_fun_2(void *args)
+{
+
+	size_t tid = *((size_t*)args);
+	insert(80,1650,NULL);
+	insert(70,1525,NULL);
+	insert(60,2560,NULL);
+	insert(50,230,NULL);
+	insert(40,140,NULL);
+	insert(32,120,NULL);
+}
 
 int main(int argc,char* argv[])
 {
@@ -28,7 +50,6 @@ int main(int argc,char* argv[])
 	int fine_grain_lock = 0;
 	int reader_writer_lock = 0;
 	int num_threads = 0;
-
 
 	struct option long_options[] = {
 		{"fg_lock",required_argument,NULL,'f'},
@@ -73,16 +94,6 @@ int main(int argc,char* argv[])
 	}
 
 
-	FG_BST_Node *root = NULL;
-	root = insert(100,10,root);
-	root = insert(200,15,root);
-	root = insert(50,20,root);
-	root = insert(150,30,root);
-	root = insert(25,40,root);
-	inorder_traversal(root);
-
-
-
 	/* Initialize the mutex lock */
 	int rc = pthread_mutex_init(&tree_lock,NULL);
 	if(rc != 0)
@@ -91,7 +102,34 @@ int main(int argc,char* argv[])
 		exit(-1);
 	}
 
+	args = (size_t *)malloc(num_threads*sizeof(size_t));
 
+
+	pthread_t thread_1;
+	pthread_t thread_2;
+
+	args[1]=1;
+	args[2]=2;
+
+	pthread_create(&thread_1,NULL,thread_fun_1,&args[1]);
+	pthread_create(&thread_2,NULL,thread_fun_2,&args[2]);
+
+	pthread_join(thread_1,NULL);
+	pthread_join(thread_2,NULL);
+	/*
+	   insert(100,10,NULL);
+	   insert(200,15,NULL);
+	   insert(300,20,NULL);
+	   insert(400,30,NULL);
+	   insert(90,40,NULL);
+	   insert(80,1650,NULL);
+	   insert(70,1525,NULL);
+	   insert(60,2560,NULL);
+	   insert(50,230,NULL);
+	   insert(500,140,NULL);
+	   insert(32,120,NULL);
+	   */
+	inorder_traversal(g_root);
 
 	/* Free the resources allocated on mutex initialization */
 	rc = pthread_mutex_destroy(&tree_lock);
