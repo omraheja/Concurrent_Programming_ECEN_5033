@@ -49,27 +49,6 @@ FG_BST_Node* create_new_node(int key,int value)
 }
 
 
-
-/*
-FG_BST_Node* insert(int key,int value,FG_BST_Node* root)
-{
-	if(root == NULL)		//This is the root node
-	{
-		root = create_new_node(key,value,root);
-	}
-	else if(key <= root->key)
-	{
-		root->left = insert(key,value,root->left);
-	}
-	else if(key > root->key)
-	{
-		root->right = insert(key,value,root->right);
-	}
-
-	return root;
-}
-*/
-
 void insert(int key,int value,FG_BST_Node* root)
 {
 	if(root == NULL)
@@ -136,4 +115,61 @@ void inorder_traversal(FG_BST_Node *g_root)
 	inorder_traversal(g_root->left);
 	printf("Key = %d   Value = %d\n",g_root->key,g_root->value);
 	inorder_traversal(g_root->right);
+}
+
+
+
+
+void search(int key,FG_BST_Node *root)
+{
+	if(root == NULL)
+	{
+		pthread_mutex_lock(&tree_lock);
+		if(g_root == NULL)
+		{
+			printf("Search Failed for node with Key = %d\n",key);
+			pthread_mutex_unlock(&tree_lock);
+			return;
+		}
+		pthread_mutex_lock(&g_root->lock);
+		root = g_root;
+		pthread_mutex_unlock(&tree_lock);
+	}
+
+	if(key < root->key)
+	{
+		if(root->left == NULL)
+		{
+			printf("Search Failed for node with key = %d\n",key);
+			pthread_mutex_unlock(&root->lock);
+			return;
+		}
+		else
+		{
+			pthread_mutex_lock(&root->left->lock);
+			pthread_mutex_unlock(&root->lock);
+			search(key,root->left);
+		}
+	}
+	else if(key > root->key)
+	{
+		if(root->right == NULL)
+		{
+			printf("Search Failed for node with Key = %d\n",key);
+			pthread_mutex_unlock(&root->lock);
+			return;
+		}
+		else
+		{
+			pthread_mutex_lock(&root->right->lock);
+			pthread_mutex_unlock(&root->lock);
+			search(key,root->right);
+		}
+	}
+	else
+	{
+
+		printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
+		pthread_mutex_unlock(&root->lock);
+	}
 }

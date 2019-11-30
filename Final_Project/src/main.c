@@ -43,6 +43,23 @@ void *thread_fun_2(void *args)
 	insert(32,120,NULL);
 }
 
+void *thread_fun_3(void *args)
+{
+	size_t tid = *((size_t*)args);
+	search(100,NULL);
+	search(200,NULL);
+
+}
+
+void *thread_fun_4(void *args)
+{
+
+	size_t tid = *((size_t*)args);
+	search(80,NULL);
+	search(70,NULL);
+}
+
+
 int main(int argc,char* argv[])
 {
 	int opt;
@@ -107,15 +124,23 @@ int main(int argc,char* argv[])
 
 	pthread_t thread_1;
 	pthread_t thread_2;
+	pthread_t thread_3;
+	pthread_t thread_4;
 
 	args[1]=1;
 	args[2]=2;
+	args[3]=3;
+	args[4]=4;
 
 	pthread_create(&thread_1,NULL,thread_fun_1,&args[1]);
 	pthread_create(&thread_2,NULL,thread_fun_2,&args[2]);
+	pthread_create(&thread_3,NULL,thread_fun_3,&args[3]);
+	pthread_create(&thread_4,NULL,thread_fun_4,&args[4]);
 
 	pthread_join(thread_1,NULL);
 	pthread_join(thread_2,NULL);
+	pthread_join(thread_3,NULL);
+	pthread_join(thread_4,NULL);
 	/*
 	   insert(100,10,NULL);
 	   insert(200,15,NULL);
@@ -130,6 +155,7 @@ int main(int argc,char* argv[])
 	   insert(32,120,NULL);
 	   */
 	inorder_traversal(g_root);
+
 
 	/* Free the resources allocated on mutex initialization */
 	rc = pthread_mutex_destroy(&tree_lock);
