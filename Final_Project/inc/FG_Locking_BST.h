@@ -17,10 +17,10 @@ typedef struct bst_node{
 
 
 FG_BST_Node* create_new_node(int key,int value);
-//FG_BST_Node* insert(int key,int value,FG_BST_Node* root);
 void insert(int key,int value,FG_BST_Node* root);
 void inorder_traversal(FG_BST_Node *root);
-
+void search(int key,FG_BST_Node *root);
+void range_query(int key1,int key2,FG_BST_Node *root);
 
 
 #endif

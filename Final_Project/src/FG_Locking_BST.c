@@ -13,11 +13,13 @@
 /* External Global variables */
 extern pthread_mutex_t tree_lock;
 extern FG_BST_Node *g_root;
+extern pthread_mutex_t dup_lock;
 
+int dup = 0;
 
 FG_BST_Node* create_new_node(int key,int value)
 {
-	printf("Creating New Node..........\n");
+//	printf("Creating New Node..........\n");
 
 	/* Create a new node
 	 * pointer returned by malloc will be typecasted with type (FG_BST_Node *)
@@ -65,40 +67,39 @@ void insert(int key,int value,FG_BST_Node* root)
 		root = g_root;
 		pthread_mutex_unlock(&tree_lock);
 	}
-	
-	
+
+
 	if(key > root->key)
 	{
-                if(root->right == NULL)
-                {
-                        root->right = create_new_node(key,value);
+		if(root->right == NULL)
+		{
+			root->right = create_new_node(key,value);
 			pthread_mutex_unlock(&root->lock);
-                }
-                else
-                {
-                        pthread_mutex_lock(&root->right->lock);
-                        pthread_mutex_unlock(&root->lock);
-                        insert(key,value,root->right);
-                }
+		}
+		else
+		{
+			pthread_mutex_lock(&root->right->lock);
+			pthread_mutex_unlock(&root->lock);
+			insert(key,value,root->right);
+		}
 
 	}
 	else if(key < root->key)
-        {
-                if(root->left == NULL)
-                {
-                        root->left = create_new_node(key,value);
-                        pthread_mutex_unlock(&root->lock);
-                }
-                else
-                {
-                        pthread_mutex_lock(&root->left->lock);
-                        pthread_mutex_unlock(&root->lock);
-                        insert(key,value,root->left);
-                }
-        }
+	{
+		if(root->left == NULL)
+		{
+			root->left = create_new_node(key,value);
+			pthread_mutex_unlock(&root->lock);
+		}
+		else
+		{
+			pthread_mutex_lock(&root->left->lock);
+			pthread_mutex_unlock(&root->lock);
+			insert(key,value,root->left);
+		}
+	}
 
 	else
-	{	
 		pthread_mutex_unlock(&root->lock);
 		printf("Duplicates Not Allowed\n");
 	}
@@ -171,5 +172,66 @@ void search(int key,FG_BST_Node *root)
 
 		printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
 		pthread_mutex_unlock(&root->lock);
+	}
+}
+
+
+
+
+void range_query(int key1,int key2,FG_BST_Node *root)
+{
+	while(key1 <= key2)
+	{
+		if(root == NULL)
+		{
+			pthread_mutex_lock(&tree_lock);
+			if(g_root == NULL)
+			{
+				//printf("Search Failed for node with Key = %d\n",key);
+				pthread_mutex_unlock(&tree_lock);
+				return;
+			}
+			pthread_mutex_lock(&g_root->lock);
+			root = g_root;
+			pthread_mutex_unlock(&tree_lock);
+		}
+
+		if(key1 < root->key)
+		{
+			if(root->left == NULL)
+			{
+				//printf("Search Failed for node with key = %d\n",key);
+				pthread_mutex_unlock(&root->lock);
+				return;
+			}
+			else
+			{
+				pthread_mutex_lock(&root->left->lock);
+				pthread_mutex_unlock(&root->lock);
+				search(key1,root->left);
+			}
+		}
+		else if(key1 > root->key)
+		{
+			if(root->right == NULL)
+			{
+				//printf("Search Failed for node with Key = %d\n",key);
+				pthread_mutex_unlock(&root->lock);
+				return;
+			}
+			else
+			{
+				pthread_mutex_lock(&root->right->lock);
+				pthread_mutex_unlock(&root->lock);
+				search(key1,root->right);
+			}
+		}
+		else
+		{
+
+			printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
+			pthread_mutex_unlock(&root->lock);
+		}
+		key1++;
 	}
 }
