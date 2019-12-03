@@ -100,6 +100,10 @@ void insert(int key,int value,FG_BST_Node* root)
 	}
 
 	else
+	{
+		pthread_mutex_lock(&dup_lock);
+		dup++;
+		pthread_mutex_unlock(&dup_lock);
 		pthread_mutex_unlock(&root->lock);
 		printf("Duplicates Not Allowed\n");
 	}
