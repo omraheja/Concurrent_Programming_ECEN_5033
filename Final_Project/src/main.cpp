@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <vector>
+#include <iostream>
+using namespace std;
+
+
 
 /* User defined header files */
 #include "main.h"
@@ -17,13 +22,17 @@ pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
 FG_BST_Node *g_root = NULL;		//Root of the BST
 size_t *args;				//Variable to be passed to each thread
 pthread_t *threads;			//Thread variable
-extern int dup;				//variable to count numbe of duplicate inserts
+extern int dup;				//variable to count number of duplicate inserts
 pthread_mutex_t dup_lock;		//Mutex lock to increment count of duplicate occurances
 int find_key[50];			//Array to store 50 keys to find in the BST
 int num_threads = 0;			//Stores number of threads [Command line argument]
 int fine_grain_lock = 0;		//Made 1 when fine grain locking is selected
 int reader_writer_lock = 0;		//Made 1 when reader-writer lock is selected
 int iterations_per_thread = 0;		//Stores number of times each thread will perform either insert,search of range query operation
+std::vector<FG_BST_Node *> bst_vector;
+
+
+
 
 
 void *thread_func(void *args)
@@ -35,9 +44,9 @@ void *thread_func(void *args)
 	
 	for(int i=0;i<(num_threads*iterations_per_thread);i++)
 	{
-		key = rand()%rand();
+		key = rand()%65535;
 		find_key[i%48] = key;
-		value = rand()%rand();
+		value = rand()%65535;
 		printf("[THREAD_FUNC]: Key inserted = %d\nValue inserted = %d\n",key,value);
 		insert(key,value,NULL);
 	
@@ -63,7 +72,7 @@ int main(int argc,char* argv[])
 		{0,0,0,0}
 	};
 
-	char *optstring = "l:i:t:";
+	char optstring[20] = "l:i:t:";
 
 	srand(time(NULL));
 

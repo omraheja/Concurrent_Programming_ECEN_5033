@@ -14,13 +14,12 @@
 extern pthread_mutex_t tree_lock;
 extern FG_BST_Node *g_root;
 extern pthread_mutex_t dup_lock;
-
 int dup = 0;
+
+
 
 FG_BST_Node* create_new_node(int key,int value)
 {
-//	printf("Creating New Node..........\n");
-
 	/* Create a new node
 	 * pointer returned by malloc will be typecasted with type (FG_BST_Node *)
 	 * FG_BST_Node is a structure declared in FG_Locking_BST.h under inc/ subfolder. */
