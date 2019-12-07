@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <pthread.h>
 
-
 /* User defined header files */
 #include "FG_Locking_BST.h"
 
@@ -15,7 +14,6 @@ extern pthread_mutex_t tree_lock;
 extern FG_BST_Node *g_root;
 extern pthread_mutex_t dup_lock;
 int dup = 0;
-
 
 
 FG_BST_Node* create_new_node(int key,int value)

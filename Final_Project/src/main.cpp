@@ -1,3 +1,16 @@
+/*@Author       : Om Raheja
+ *@File Name    : main.cpp 
+ *@Date         : 12/9/2019 
+ *@Tools        : Compiler:g++ ; Editor: Vim
+ *@References	: https://github.com/swapnil-pimpale/lock-free-BST
+		: https://github.com/VasuAgrawal/418FinalProject
+		: The above codes were referred for implementing the 
+		  Concurrent Tree. The logic and explanation of the code
+		  pieces used from the above resources are explained in
+		  detail in the comment sections.
+ */
+
+
 /* Standard C Library Headers */
 #include <stdio.h>
 #include <pthread.h>
@@ -30,8 +43,6 @@ int fine_grain_lock = 0;		//Made 1 when fine grain locking is selected
 int reader_writer_lock = 0;		//Made 1 when reader-writer lock is selected
 int iterations_per_thread = 0;		//Stores number of times each thread will perform either insert,search of range query operation
 std::vector<FG_BST_Node *> bst_vector;
-
-
 
 
 
@@ -75,10 +86,11 @@ int main(int argc,char* argv[])
 		{"lock",required_argument,NULL,'l'},
 		{"iterations",required_argument,NULL,'i'},
 		{"num_of_threads",required_argument,NULL,'t'},
+		{"help",no_argument,NULL,'h'},
 		{0,0,0,0}
 	};
 
-	char optstring[20] = "l:i:t:";
+	char optstring[20] = "l:i:t:h";
 
 	srand(time(NULL));
 
@@ -123,7 +135,29 @@ int main(int argc,char* argv[])
 				num_threads = atoi(optarg);
 				printf("Number of threads = %d\n",num_threads);
 				break;
+
+			case 'h':
+				printf("\t\t\tCONCURRENT TREE HELP SECTION\n");
+				printf("1. -t = <number of threads> Specify the number of threads\n");
+				printf("2. -i = <number of iterations> Specify the number of iterations for insert/search/range query\n");
+				printf("3. -l = <lock selection> Specify locking mechanism to be used, 'fine-grain' or 'reader-writer'\n\n");
+				printf("\t\t\tINSTRUCTIONS TO RUN THE CODE\n>>  To run the program,type 'make all'\n");
+				printf(">>  ./Concurrent_tree -t [number_of_threads] -i [number_of_iterations] -l [lock]\n\n");
+				break;
+
+			default:
+				printf("[ERROR]: Invalid arguments, type './concurrent_tree --help' for help'\n");
+				break;
+				
 		}
+	}
+
+
+
+	if(argc < 2)
+	{
+		printf("[ERROR]: Invalid arguments, type './concurrent_tree --help' for help'\n");
+		exit(-1);
 	}
 
 	/* Allocate resources for threads */
@@ -179,7 +213,7 @@ int main(int argc,char* argv[])
 
 	inorder_traversal(g_root);
 
-	printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
+//	printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
 //	printf("/**********************************************************Range between keys************************************************/\n");
 //	range(142,65535,NULL);
 

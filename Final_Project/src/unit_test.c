@@ -5,8 +5,8 @@
 #include <CUnit/Automated.h>
 
 /* User defined header files */
-#include "main.h"
-#include "FG_Locking_BST.h"
+#include "../inc/main.h"
+#include "../inc/FG_Locking_BST.h"
 
 /* Global variables */
 pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
@@ -136,16 +136,27 @@ int clean_suite(void)
 
 void test_create_new_node(void)
 {
-	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,NULL),NULL);
+	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
 }
 
 
+void test_insert(void)
+{
+        CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
+}
+
+
+void test_search(void)
+{
+        CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
+}
 
 
 
 
 int register_test_suite(void) {
 
+	printf("Registering test suites\n");
 	CU_pSuite pSuite = NULL;
 
 	pSuite = CU_add_suite("Functionality Test of Concurrent Tree", init_suite, clean_suite);
@@ -153,9 +164,9 @@ int register_test_suite(void) {
 		return -1;
 	}
 	/*Adding tests to the suite */
-	if ((NULL == CU_add_test(pSuite, "create_new_node", test_create_new_node))  ||)
-//	    (NULL == CU_add_test(pSuite, "insert", test_insert)) ||
-//	    (NULL == CU_add_test(pSuite, "search", test_search))) 
+	if ((NULL == CU_add_test(pSuite, "create_new_node", test_create_new_node))  ||
+	    (NULL == CU_add_test(pSuite, "insert", test_insert)) ||
+	    (NULL == CU_add_test(pSuite, "search", test_search))) 
 	{
 		return -1;
 	}
