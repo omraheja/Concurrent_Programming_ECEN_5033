@@ -238,3 +238,83 @@ void range_query(int key1,int key2,FG_BST_Node *root)
 		key1++;
 	}
 }
+
+
+
+
+
+
+
+void range(int key1,int key2,FG_BST_Node *root,int thread_id)
+{
+	int temp;
+
+	if(key1 > key2)
+	{
+		temp = key1;
+		key1 = key2;
+		key2 = temp;
+	}
+
+	if(root == NULL)
+	{
+		pthread_mutex_lock(&tree_lock);
+		if(g_root == NULL)
+		{
+			//printf("Search Failed for node with Key = %d\n",key1);
+			pthread_mutex_unlock(&tree_lock);
+			return;
+		}
+		pthread_mutex_lock(&g_root->lock);
+		root = g_root;
+		pthread_mutex_unlock(&tree_lock);
+	}
+
+	if(key1 < root->key)
+	{
+		if(root->left == NULL)
+		{
+			//printf("Search Failed for node with key = %d\n",key1);
+			//pthread_mutex_unlock(&root->lock);
+		}
+		else
+		{
+			pthread_mutex_lock(&root->left->lock);
+			pthread_mutex_unlock(&root->lock);
+			range(key1,key2,root->left,thread_id);
+			pthread_mutex_lock(&root->lock);
+		}
+	}
+
+	/* if root's data lies in range, then prints root's data */
+        if ( key1 <= root->key && key2 >= root->key )
+        {
+                printf("Thread Id = %d \t Range Value = %d\n", thread_id, root->key);
+                //pthread_mutex_unlock(&root->lock);
+        }
+
+
+
+	/* If root->data is smaller than k2, then only we can get o/p keys
+	   in right subtree */
+	if (key2 > root->key)
+	{
+		if(root->right == NULL)
+		{
+			//printf("Search Failed for node with Key = %d\n",key1);
+			//pthread_mutex_unlock(&root->lock);
+		}
+		else
+		{
+			pthread_mutex_lock(&root->right->lock);
+			pthread_mutex_unlock(&root->lock);
+			range(key1,key2,root->right,thread_id);
+			pthread_mutex_lock(&root->lock);
+		}
+	}
+
+	pthread_mutex_unlock(&root->lock);
+
+
+
+}

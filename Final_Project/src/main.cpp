@@ -41,19 +41,25 @@ void *thread_func(void *args)
 	int key;
 	int value;
 	printf("[THREAD_FUNC]: tid = %ld\n",tid);
-	
+
 	for(int i=0;i<(num_threads*iterations_per_thread);i++)
 	{
 		key = rand()%65535;
 		find_key[i%48] = key;
 		value = rand()%65535;
-		printf("[THREAD_FUNC]: Key inserted = %d\nValue inserted = %d\n",key,value);
+		printf("[THREAD_FUNC]: Key inserted = %d   Value inserted = %d\n",key,value);
 		insert(key,value,NULL);
-	
+
 		/* If thread id is a multiple of 3, it will search after inserting elements */
 		if(tid % 3 == 0)
 		{
 			search(find_key[i%num_threads],NULL);
+		}
+
+		if(tid % 2 == 0)
+		{
+			printf("<<<Thread Id = %zu>>> <<<Range %d - %d>>>\n",tid,find_key[48-i],find_key[i]);
+			range(find_key[48-i],find_key[i],NULL,tid);
 		}
 	}
 
@@ -100,7 +106,7 @@ int main(int argc,char* argv[])
 				{
 					printf("Fine-Grain Lock Selected\n");
 				}
-				
+
 				if(reader_writer_lock == 1)
 				{
 					printf("Reader-Writer Lock Selected\n");
@@ -174,8 +180,8 @@ int main(int argc,char* argv[])
 	inorder_traversal(g_root);
 
 	printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
-	//	printf("/**********************************************************Range between keys************************************************/\n");
-	//	range_query(3,685,NULL);
+//	printf("/**********************************************************Range between keys************************************************/\n");
+//	range(142,65535,NULL);
 
 	/* Free the resources allocated on mutex initialization */
 	rc = pthread_mutex_destroy(&tree_lock);
