@@ -76,7 +76,7 @@ void inorder_traversal(BST_Node *root);
  *@Param in [2]	: BST_Node* root
  *@Return       : 1 on success ; -1 on failure
  * */
-int search(int key,BST_Node *root);
+BST_Node* search(int key,BST_Node *root);
 
 
 void range_query(int key1,int key2,BST_Node *root);

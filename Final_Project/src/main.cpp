@@ -26,7 +26,8 @@ size_t *args;				//Variable to be passed to each thread
 pthread_t *threads;			//Thread variable
 extern int dup;				//variable to count number of duplicate inserts
 pthread_mutex_t dup_lock;		//Mutex lock to increment count of duplicate occurances
-int find_key[MAX_SIZE]={0};		//Array to store 50 keys to find in the BST
+int find_key[MAX_SIZE]={0};		//Array to store MAX_SIZE keys to find in the BST
+int find_value[MAX_SIZE]={0};		//Array to store MAX_SIZE keys to verify insert functionality
 int num_threads = 0;			//Stores number of threads [Command line argument]
 int fine_grain_lock = 0;		//Made 1 when fine grain locking is selected
 int reader_writer_lock = 0;		//Made 1 when reader-writer lock is selected
@@ -46,11 +47,16 @@ void *thread_func(void *args)
 	for(int i=0;i<iterations_per_thread;i++)
 	{
 		key = rand() % MODULO;					//Generate random keys between 0-65535
-		find_key[tid] = key;					//Store the keys in 
-		value = rand() % MODULO;				//Store the value	
+		find_key[tid] = key;					//Store the keys in an array
+		value = rand() % MODULO;				//Store the value in an array
+		find_value[tid] = value;				
 		printf("[THREAD_FUNC]: [Thread id %ld] [Key inserted = %d] [Value inserted = %d]\n",tid,key,value);
 		insert(find_key[tid],value,NULL);
-		search(find_key[tid],NULL);
+		BST_Node* return_node = search(find_key[tid],NULL);
+		if(return_node->value == find_value[tid])
+		{
+			printf("SUCCESS: KEY %d FOUND\n",find_value[tid]);
+		}
 
 		/* If thread id is a multiple of 3, it will search after inserting elements */
 		if(tid % 3 == 0)

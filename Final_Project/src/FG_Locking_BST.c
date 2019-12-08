@@ -116,7 +116,7 @@ void inorder_traversal(BST_Node *g_root)
 
 
 
-int search(int key,BST_Node *root)
+BST_Node* search(int key,BST_Node *root)
 {
 	if(root == NULL)
 	{
@@ -125,7 +125,8 @@ int search(int key,BST_Node *root)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
 			pthread_mutex_unlock(&tree_lock);
-			return -1;
+			//return -1;
+			return NULL;
 		}
 		pthread_mutex_lock(&g_root->lock);
 		root = g_root;
@@ -138,7 +139,8 @@ int search(int key,BST_Node *root)
 		{
 			printf("Search Failed for node with key = %d\n",key);
 			pthread_mutex_unlock(&root->lock);
-			return -1;
+			//return -1;
+			//return NULL;
 		}
 		else
 		{
@@ -153,7 +155,8 @@ int search(int key,BST_Node *root)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
 			pthread_mutex_unlock(&root->lock);
-			return -1;
+			//return -1;
+			return NULL;
 		}
 		else
 		{
@@ -165,9 +168,10 @@ int search(int key,BST_Node *root)
 	else
 	{
 
-		printf("[SEARCH] [Key-------------------------------->%d] [Data-------------------------------->%d]\n",root->key,root->value);
+		//printf("[SEARCH] [Key-------------------------------->%d] [Data-------------------------------->%d]\n",root->key,root->value);
 		pthread_mutex_unlock(&root->lock);
-		return 1;
+		//return 1;
+		return root;
 	}
 }
 
