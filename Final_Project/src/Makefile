@@ -9,6 +9,11 @@ vpath %.h ../inc/
 OBJ = main.o FG_Locking_BST.o
 
 all:concurrent_tree unit_test
+	@echo "\n*************************************************************************************"
+	@echo "*\t\t\tHOW TO RUN THE CODE?\t\t\t                    *"
+	@echo "*\t\t\tType './concurrent_tree --help'\t\t\t            *"
+	@echo  "*************************************************************************************"
+
 
 concurrent_tree: $(OBJ)
 	$(CC) -o concurrent_tree $(OBJ) -lpthread -lrt
@@ -27,4 +32,4 @@ unit_test.o: unit_test.c main.h FG_Locking_BST.h
 	$(CC) -c -g unit_test.c $(CFLAGS) -lcunit
 
 clean:
-	-rm -f *.o *.xml concurrent_tree unit_test
+	-rm -f *.o *.xml concurrent_tree unit_test ans.txt

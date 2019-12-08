@@ -1,9 +1,11 @@
+#if 0
 /* Standard C Library Header Files */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
+#endif
 
 /* User defined header files */
 #include "FG_Locking_BST.h"
@@ -11,17 +13,17 @@
 
 /* External Global variables */
 extern pthread_mutex_t tree_lock;
-extern FG_BST_Node *g_root;
+extern BST_Node *g_root;
 extern pthread_mutex_t dup_lock;
 int dup = 0;
 
 
-FG_BST_Node* create_new_node(int key,int value)
+BST_Node* create_new_node(int key,int value)
 {
 	/* Create a new node
 	 * pointer returned by malloc will be typecasted with type (FG_BST_Node *)
 	 * FG_BST_Node is a structure declared in FG_Locking_BST.h under inc/ subfolder. */
-	FG_BST_Node *new_node = (FG_BST_Node *)malloc(sizeof(FG_BST_Node));
+	BST_Node *new_node = (BST_Node *)malloc(sizeof(BST_Node));
 
 	/* Check if memory has been successfully allocated */
 	if(new_node == NULL)
@@ -48,7 +50,7 @@ FG_BST_Node* create_new_node(int key,int value)
 }
 
 
-void insert(int key,int value,FG_BST_Node* root)
+void insert(int key,int value,BST_Node* root)
 {
 	if(root == NULL)
 	{
@@ -107,7 +109,7 @@ void insert(int key,int value,FG_BST_Node* root)
 }
 
 
-void inorder_traversal(FG_BST_Node *g_root)
+void inorder_traversal(BST_Node *g_root)
 {
 	if(g_root == NULL)
 	{
@@ -122,7 +124,7 @@ void inorder_traversal(FG_BST_Node *g_root)
 
 
 
-void search(int key,FG_BST_Node *root)
+int search(int key,BST_Node *root)
 {
 	if(root == NULL)
 	{
@@ -131,7 +133,7 @@ void search(int key,FG_BST_Node *root)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
 			pthread_mutex_unlock(&tree_lock);
-			return;
+			return -1;
 		}
 		pthread_mutex_lock(&g_root->lock);
 		root = g_root;
@@ -144,7 +146,7 @@ void search(int key,FG_BST_Node *root)
 		{
 			printf("Search Failed for node with key = %d\n",key);
 			pthread_mutex_unlock(&root->lock);
-			return;
+			return -1;
 		}
 		else
 		{
@@ -159,7 +161,7 @@ void search(int key,FG_BST_Node *root)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
 			pthread_mutex_unlock(&root->lock);
-			return;
+			return -1;
 		}
 		else
 		{
@@ -173,13 +175,14 @@ void search(int key,FG_BST_Node *root)
 
 		printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
 		pthread_mutex_unlock(&root->lock);
+		return 1;
 	}
 }
 
 
 
 
-void range_query(int key1,int key2,FG_BST_Node *root)
+void range_query(int key1,int key2,BST_Node *root)
 {
 	while(key1 <= key2)
 	{
@@ -243,7 +246,7 @@ void range_query(int key1,int key2,FG_BST_Node *root)
 
 
 
-void range(int key1,int key2,FG_BST_Node *root,int thread_id)
+void range(int key1,int key2,BST_Node *root,int thread_id)
 {
 	int temp;
 

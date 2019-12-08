@@ -10,7 +10,7 @@
 
 /* Global variables */
 pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
-FG_BST_Node *g_root = NULL;		//Root of the BST
+BST_Node *g_root = NULL;		//Root of the BST
 size_t *args;				//Variable to be passed to each thread
 pthread_t *threads;			//Thread variable
 extern int dup;				//variable to count number of duplicate inserts
@@ -22,40 +22,45 @@ int reader_writer_lock = 0;		//Made 1 when reader-writer lock is selected
 int iterations_per_thread = 0;		//Stores number of times each thread will perform either insert,search of range query operation
 
 
-
+#if 0
 void *thread_func(void *args)
 {
 	size_t tid = *((size_t *)args);
 	int key;
 	int value;
-	printf("[THREAD_FUNC]: tid = %ld\n",tid);
+	int rc;
+	//printf("[THREAD_FUNC]: tid = %ld\n",tid);
 
-	for(int i=0;i<(num_threads*iterations_per_thread);i++)
+	for(int i=0;i<iterations_per_thread;i++)
 	{
 		key = rand()%65535;
 		find_key[i%48] = key;
 		value = rand()%65535;
-		printf("[THREAD_FUNC]: Key inserted = %d\nValue inserted = %d\n",key,value);
+		printf("[THREAD_FUNC: INSERT] [Thread %zu] [Key inserted = %d] [Value inserted = %d]\n",tid,key,value);
 		insert(key,value,NULL);
 
 		/* If thread id is a multiple of 3, it will search after inserting elements */
 		if(tid % 3 == 0)
 		{
-			search(find_key[i%num_threads],NULL);
+			rc = search(find_key[i%num_threads],NULL);
+			if(rc == 1)
+			{
+				printf("[THREAD FUNC: SEARCH] [Thread %zu] [Key Found: %d] [Value extracted: %d]\n",tid,find_key[i % num_threads],value);
+			}
 		}
 	}
-
 }
-
+#endif
 
 
 int init_suite(void)
 {
 	printf("INIT_SUITE\n");
-	num_threads = 50;			//Stores number of threads [Command line argument]
+#if 0
+	num_threads = 5;			//Stores number of threads [Command line argument]
 	fine_grain_lock = 1;			//Made 1 when fine grain locking is selected
 	reader_writer_lock = 0;			//Made 1 when reader-writer lock is selected
-	iterations_per_thread = 5;		//Stores number of times each thread will perform either insert,search of range query operation
+	iterations_per_thread = 1;		//Stores number of times each thread will perform either insert,search of range query operation
 
 	/* Allocate resources for threads */
 	threads = (pthread_t *)malloc(num_threads*sizeof(pthread_t));
@@ -106,6 +111,7 @@ int init_suite(void)
 		printf("Joined thread %zu\n",i);
 	}
 
+#endif
 	return 0;
 }
 
@@ -115,7 +121,7 @@ int init_suite(void)
 
 int clean_suite(void)
 {
-
+#if 0
 	/* Free the resources allocated on mutex initialization */
 	int rc = pthread_mutex_destroy(&tree_lock);
 	if(rc != 0)
@@ -129,26 +135,46 @@ int clean_suite(void)
 	{
 		printf("[ERROR]:Mutex Destroy Failed!\n");
 	}
-
+#endif
 	return 0;
 }
 
 
 void test_create_new_node(void)
 {
-	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
+	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(50,100),NULL);
 }
 
 
 void test_insert(void)
 {
-        CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
+        insert(10,200,g_root);
+	insert(20,400,g_root);
+        insert(30,200,g_root);
+        insert(40,200,g_root);
+        insert(60,200,g_root);
+	insert(70,400,g_root);
+	insert(80,400,g_root);
+	insert(90,400,g_root);
+
+        CU_ASSERT(search(10,g_root) == 1);
+        CU_ASSERT(search(20,g_root) == 1);
+        CU_ASSERT(search(30,g_root) == 1);
+        CU_ASSERT(search(40,g_root) == 1);
+        CU_ASSERT(search(50,g_root) == 1);
+        CU_ASSERT(search(60,g_root) == 1);
+        CU_ASSERT(search(70,g_root) == 1);
+        CU_ASSERT(search(100,g_root) == 1);
+
+        //CU_ASSERT_NOT_EQUAL(insert(12,400,g_root),NULL);
+        //CU_ASSERT_NOT_EQUAL(insert(100,500,g_root),NULL);
 }
 
 
 void test_search(void)
 {
-        CU_ASSERT_NOT_EQUAL(g_root = create_new_node(123,100),NULL);
+       // CU_ASSERT_NOT_EQUAL(search(25,g_root),NULL);
+       // CU_ASSERT_NOT_EQUAL(insert(75,g_root),NULL);
 }
 
 
