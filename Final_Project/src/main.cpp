@@ -13,7 +13,11 @@
 /* User defined header files */
 #include "main.h"
 #include "FG_Locking_BST.h"
+#include <bits/stdc++.h> 
 
+/* Defines */
+#define MODULO		65535
+#define MAX_SIZE	1200
 
 /* Global variables */
 pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
@@ -22,7 +26,7 @@ size_t *args;				//Variable to be passed to each thread
 pthread_t *threads;			//Thread variable
 extern int dup;				//variable to count number of duplicate inserts
 pthread_mutex_t dup_lock;		//Mutex lock to increment count of duplicate occurances
-int find_key[50]={0};			//Array to store 50 keys to find in the BST
+int find_key[MAX_SIZE]={0};		//Array to store 50 keys to find in the BST
 int num_threads = 0;			//Stores number of threads [Command line argument]
 int fine_grain_lock = 0;		//Made 1 when fine grain locking is selected
 int reader_writer_lock = 0;		//Made 1 when reader-writer lock is selected
@@ -31,39 +35,33 @@ std::vector<BST_Node *> bst_vector;
 
 
 
-
 /* Each threads entry point after creation */
 void *thread_func(void *args)
 {
-	size_t tid = *((size_t *)args);
-	int key;
-	int value;
+	size_t tid = *((size_t *)args);		//Extract the thread id
+	int key;				//Stores key to be inserted
+	int value;				//Stores value to be inserted
 
-
-
+	/* Loop to insert, search and range query multiple key-values */
 	for(int i=0;i<iterations_per_thread;i++)
 	{
-		
-		key = rand()%65;
-		
-		find_key[tid] = key;
-		
-		value = rand()%65;
-		
+		key = rand() % MODULO;					//Generate random keys between 0-65535
+		find_key[tid] = key;					//Store the keys in 
+		value = rand() % MODULO;				//Store the value	
 		printf("[THREAD_FUNC]: [Thread id %ld] [Key inserted = %d] [Value inserted = %d]\n",tid,key,value);
-		
-		insert(key,value,NULL);
+		insert(find_key[tid],value,NULL);
+		search(find_key[tid],NULL);
 
 		/* If thread id is a multiple of 3, it will search after inserting elements */
 		if(tid % 3 == 0)
 		{
-			search(find_key[i%num_threads],NULL);
+			search(find_key[tid%num_threads],NULL);
 		}
 
 		if(tid == (num_threads - 1))
 		{
-			//printf("<<<Thread Id = %zu>>> <<<Range %d - %d>>>\n",tid,find_key[48-i],find_key[i]);
-			//range(find_key[i],find_key[num_threads - i],NULL,tid);
+			printf("[RANGE_QUERY] [THREAD ID = %zu] [RANGE %d - %d]\n",tid,find_key[MAX_SIZE-i],find_key[i]);
+			range(find_key[i],find_key[num_threads - i],NULL,tid);
 		}
 	}
 
@@ -137,18 +135,17 @@ int main(int argc,char* argv[])
 				printf("3. -l = <lock selection> Specify locking mechanism to be used, 'fine-grain' or 'reader-writer'\n\n");
 				printf("\t\t\tINSTRUCTIONS TO RUN THE CODE\n>>  To run the program,type 'make all'\n");
 				printf(">>  ./Concurrent_tree -t [number_of_threads] -i [number_of_iterations] -l [lock]\n\n");
+				exit(1);
 				break;
 
 			default:
 				printf("[ERROR]: Invalid arguments, type './concurrent_tree --help' for help'\n");
 				break;
-
 		}
 	}
 
-
-
-	if(argc < 2)
+	/* If number of arguments are less than two, throw an error */
+	if(argc <= 2)
 	{
 		printf("[ERROR]: Invalid arguments, type './concurrent_tree --help' for help'\n");
 		exit(-1);
@@ -157,6 +154,21 @@ int main(int argc,char* argv[])
 	/* Allocate resources for threads */
 	threads = (pthread_t *)malloc(num_threads*sizeof(pthread_t));
 	args    = (size_t *)malloc(num_threads*sizeof(size_t));
+
+#if 0
+	std::vector<int>test;
+	
+	for(int i=0;i<10;i++)
+	{
+		test.insert(test.begin() + i, i*5);
+		printf("Test[%d] = %d\n",i,test[i]);
+	}
+
+	for(int i=0;i<10;i++)
+	{
+		printf("Test[%d] = %d\n",i,test[i]);
+	}
+#endif
 
 	/* Initialize the mutex lock */
 	int rc = pthread_mutex_init(&tree_lock,NULL);
@@ -179,7 +191,7 @@ int main(int argc,char* argv[])
 	for(size_t i =0;i<num_threads;i++)
 	{
 		args[i] = i;
-		printf("Creating Thread = %zu\n",args[i]);
+//		printf("Creating Thread = %zu\n",args[i]);
 		rc = pthread_create(&threads[i],NULL,&thread_func,&args[i]);
 
 		if(rc)
@@ -198,12 +210,15 @@ int main(int argc,char* argv[])
 			printf("[ERROR]:pthread_join: %d\n",rc);
 			exit(-1);
 		}
-		printf("Joined thread %zu\n",i);
+//		printf("Joined thread %zu\n",i);
 	}
 
+	printf("********************************INORDER TRAVERSAL START******************************************\n");
 	inorder_traversal(g_root);
+	printf("********************************INORDER TRAVERSAL END******************************************\n");
 
 
+#if 0
 	for(int i=0;i<50;i++)
 	{
 		printf("find_key[%d] = %d\n",i,find_key[i]);
@@ -220,11 +235,9 @@ int main(int argc,char* argv[])
 		range(find_key[num_threads-1],find_key[0],NULL,0);
 
 	}
+#endif
 
-
-		printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
-	//	printf("/**********************************************************Range between keys************************************************/\n");
-	//	range(142,65535,NULL);
+	printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
 
 	/* Free the resources allocated on mutex initialization */
 	rc = pthread_mutex_destroy(&tree_lock);

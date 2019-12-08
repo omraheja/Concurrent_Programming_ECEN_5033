@@ -1,12 +1,3 @@
-#if 0
-/* Standard C Library Header Files */
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <errno.h>
-#include <pthread.h>
-#endif
-
 /* User defined header files */
 #include "FG_Locking_BST.h"
 
@@ -18,6 +9,7 @@ extern pthread_mutex_t dup_lock;
 int dup = 0;
 
 
+/* Create New Node */
 BST_Node* create_new_node(int key,int value)
 {
 	/* Create a new node
@@ -49,7 +41,7 @@ BST_Node* create_new_node(int key,int value)
 	return new_node;
 }
 
-
+/* Insert */
 void insert(int key,int value,BST_Node* root)
 {
 	if(root == NULL)
@@ -117,7 +109,7 @@ void inorder_traversal(BST_Node *g_root)
 	}
 
 	inorder_traversal(g_root->left);
-	printf("Key = %d   Value = %d\n",g_root->key,g_root->value);
+	printf("[INORDER TRAVERSAL] [Key = %d] [Value = %d]\n",g_root->key,g_root->value);
 	inorder_traversal(g_root->right);
 }
 
@@ -173,7 +165,7 @@ int search(int key,BST_Node *root)
 	else
 	{
 
-		printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
+		printf("[SEARCH] [Key-------------------------------->%d] [Data-------------------------------->%d]\n",root->key,root->value);
 		pthread_mutex_unlock(&root->lock);
 		return 1;
 	}
@@ -181,7 +173,8 @@ int search(int key,BST_Node *root)
 
 
 
-
+/* This Function is not being used
+ * Will me removed in the future commit */
 void range_query(int key1,int key2,BST_Node *root)
 {
 	while(key1 <= key2)
@@ -290,7 +283,7 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 	/* if root's data lies in range, then prints root's data */
         if ( key1 <= root->key && key2 >= root->key )
         {
-                printf("Thread Id = %d \t Range Value = %d\n", thread_id, root->key);
+                printf("[RANGE QUERY] [THREAD ID -> %d] [RANGE VALUE -> %d]\n", thread_id, root->key);
                 //pthread_mutex_unlock(&root->lock);
         }
 
@@ -315,7 +308,4 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 	}
 
 	pthread_mutex_unlock(&root->lock);
-
-
-
 }
