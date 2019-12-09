@@ -1,9 +1,9 @@
 /* User defined header files */
-#include "FG_Locking_BST.h"
+#include "RW_Locking_BST.h"
 
 
 /* External Global variables */
-extern pthread_mutex_t tree_lock;
+extern pthread_rwlock_t tree_lock;
 extern BST_Node *g_root;
 extern pthread_mutex_t dup_lock;
 int dup = 0;
@@ -35,7 +35,7 @@ BST_Node* create_new_node(int key,int value)
 	new_node->right = NULL;
 
 	/* Initiaize the lock associated with the newly created node */
-	pthread_mutex_init(&new_node->lock, NULL);
+	pthread_rwlock_init(&new_node->lock, NULL);
 
 	/* Return the address of the newly created node */
 	return new_node;
@@ -46,17 +46,17 @@ void insert(int key,int value,BST_Node* root)
 {
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
+		pthread_rwlock_wrlock(&tree_lock);
 		if(g_root == NULL)
 		{
 			g_root = create_new_node(key,value);
-			pthread_mutex_unlock(&tree_lock);
+			pthread_rwlock_unlock(&tree_lock);
 			return;
 		}
 
-		pthread_mutex_lock(&g_root->lock);
+		pthread_rwlock_wrlock(&g_root->lock);
 		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_rwlock_unlock(&tree_lock);
 	}
 
 
@@ -65,12 +65,12 @@ void insert(int key,int value,BST_Node* root)
 		if(root->right == NULL)
 		{
 			root->right = create_new_node(key,value);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_unlock(&root->lock);
 		}
 		else
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_wrlock(&root->right->lock);
+			pthread_rwlock_unlock(&root->lock);
 			insert(key,value,root->right);
 		}
 
@@ -80,12 +80,12 @@ void insert(int key,int value,BST_Node* root)
 		if(root->left == NULL)
 		{
 			root->left = create_new_node(key,value);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_unlock(&root->lock);
 		}
 		else
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_wrlock(&root->left->lock);
+			pthread_rwlock_unlock(&root->lock);
 			insert(key,value,root->left);
 		}
 	}
@@ -95,7 +95,7 @@ void insert(int key,int value,BST_Node* root)
 		pthread_mutex_lock(&dup_lock);
 		dup++;
 		pthread_mutex_unlock(&dup_lock);
-		pthread_mutex_unlock(&root->lock);
+		pthread_rwlock_unlock(&root->lock);
 		printf("Duplicates Not Allowed\n");
 	}
 }
@@ -120,17 +120,17 @@ BST_Node* search(int key,BST_Node *root)
 {
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
+		pthread_rwlock_rdlock(&tree_lock);
 		if(g_root == NULL)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
-			pthread_mutex_unlock(&tree_lock);
+			pthread_rwlock_unlock(&tree_lock);
 			//return -1;
 			return NULL;
 		}
-		pthread_mutex_lock(&g_root->lock);
+		pthread_rwlock_rdlock(&g_root->lock);
 		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_rwlock_unlock(&tree_lock);
 	}
 
 	if(key < root->key)
@@ -138,14 +138,14 @@ BST_Node* search(int key,BST_Node *root)
 		if(root->left == NULL)
 		{
 			printf("Search Failed for node with key = %d\n",key);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_unlock(&root->lock);
 			//return -1;
 			//return NULL;
 		}
 		else
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_rdlock(&root->left->lock);
+			pthread_rwlock_unlock(&root->lock);
 			search(key,root->left);
 		}
 	}
@@ -154,14 +154,14 @@ BST_Node* search(int key,BST_Node *root)
 		if(root->right == NULL)
 		{
 			printf("Search Failed for node with Key = %d\n",key);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_unlock(&root->lock);
 			//return -1;
 			return NULL;
 		}
 		else
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_rdlock(&root->right->lock);
+			pthread_rwlock_unlock(&root->lock);
 			search(key,root->right);
 		}
 	}
@@ -169,7 +169,7 @@ BST_Node* search(int key,BST_Node *root)
 	{
 
 		//printf("[SEARCH] [Key-------------------------------->%d] [Data-------------------------------->%d]\n",root->key,root->value);
-		pthread_mutex_unlock(&root->lock);
+		pthread_rwlock_unlock(&root->lock);
 		//return 1;
 		return root;
 	}
@@ -185,16 +185,16 @@ void range_query(int key1,int key2,BST_Node *root)
 	{
 		if(root == NULL)
 		{
-			pthread_mutex_lock(&tree_lock);
+			pthread_rwlock_rdlock(&tree_lock);
 			if(g_root == NULL)
 			{
 				//printf("Search Failed for node with Key = %d\n",key);
-				pthread_mutex_unlock(&tree_lock);
+				pthread_rwlock_unlock(&tree_lock);
 				return;
 			}
-			pthread_mutex_lock(&g_root->lock);
+			pthread_rwlock_rdlock(&g_root->lock);
 			root = g_root;
-			pthread_mutex_unlock(&tree_lock);
+			pthread_rwlock_unlock(&tree_lock);
 		}
 
 		if(key1 < root->key)
@@ -202,13 +202,13 @@ void range_query(int key1,int key2,BST_Node *root)
 			if(root->left == NULL)
 			{
 				//printf("Search Failed for node with key = %d\n",key);
-				pthread_mutex_unlock(&root->lock);
+				pthread_rwlock_unlock(&root->lock);
 				return;
 			}
 			else
 			{
-				pthread_mutex_lock(&root->left->lock);
-				pthread_mutex_unlock(&root->lock);
+				pthread_rwlock_rdlock(&root->left->lock);
+				pthread_rwlock_unlock(&root->lock);
 				search(key1,root->left);
 			}
 		}
@@ -217,13 +217,13 @@ void range_query(int key1,int key2,BST_Node *root)
 			if(root->right == NULL)
 			{
 				//printf("Search Failed for node with Key = %d\n",key);
-				pthread_mutex_unlock(&root->lock);
+				pthread_rwlock_unlock(&root->lock);
 				return;
 			}
 			else
 			{
-				pthread_mutex_lock(&root->right->lock);
-				pthread_mutex_unlock(&root->lock);
+				pthread_rwlock_rdlock(&root->right->lock);
+				pthread_rwlock_unlock(&root->lock);
 				search(key1,root->right);
 			}
 		}
@@ -231,7 +231,7 @@ void range_query(int key1,int key2,BST_Node *root)
 		{
 
 			printf("Key = %d Data-------------------------------->%d\n",root->key,root->value);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_unlock(&root->lock);
 		}
 		key1++;
 	}
@@ -256,16 +256,16 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
+		pthread_rwlock_rdlock(&tree_lock);
 		if(g_root == NULL)
 		{
 			//printf("Search Failed for node with Key = %d\n",key1);
-			pthread_mutex_unlock(&tree_lock);
+			pthread_rwlock_unlock(&tree_lock);
 			return;
 		}
-		pthread_mutex_lock(&g_root->lock);
+		pthread_rwlock_rdlock(&g_root->lock);
 		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_rwlock_unlock(&tree_lock);
 	}
 
 	if(key1 < root->key)
@@ -277,10 +277,10 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 		}
 		else
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_rdlock(&root->left->lock);
+			pthread_rwlock_unlock(&root->lock);
 			range(key1,key2,root->left,thread_id);
-			pthread_mutex_lock(&root->lock);
+			pthread_rwlock_rdlock(&root->lock);
 		}
 	}
 
@@ -304,12 +304,12 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 		}
 		else
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
+			pthread_rwlock_rdlock(&root->right->lock);
+			pthread_rwlock_unlock(&root->lock);
 			range(key1,key2,root->right,thread_id);
-			pthread_mutex_lock(&root->lock);
+			pthread_rwlock_rdlock(&root->lock);
 		}
 	}
 
-	pthread_mutex_unlock(&root->lock);
+	pthread_rwlock_unlock(&root->lock);
 }

@@ -3,16 +3,16 @@
  *@Date         : 12/9/2019 
  *@Tools        : Compiler:g++ ; Editor: Vim
  *@References	: https://github.com/swapnil-pimpale/lock-free-BST
- : https://github.com/VasuAgrawal/418FinalProject
- : The above codes were referred for implementing the
- Concurrent Tree. The logic and explanation of the code
- pieces used and referred from the above resources are 
- explained in detail in the comment sections.
+ 		: https://github.com/VasuAgrawal/418FinalProject
+ 		: The above codes were referred for implementing the
+ 		  Concurrent Tree. The logic and explanation of the code
+ 		  pieces used and referred from the above resources are 
+ 		  explained in detail in the comment sections.
  */
 
 /* User defined header files */
 #include "main.h"
-#include "FG_Locking_BST.h"
+#include "RW_Locking_BST.h"
 #include <bits/stdc++.h> 
 
 /* Defines */
@@ -20,7 +20,7 @@
 #define MAX_SIZE	1200
 
 /* Global variables */
-pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
+pthread_rwlock_t tree_lock;		//Mutex lock to lock the root of the BST
 BST_Node *g_root = NULL;		//Root of the BST
 size_t *args;				//Variable to be passed to each thread
 pthread_t *threads;			//Thread variable
@@ -101,7 +101,7 @@ void *thread_func(void *args)
 
 int main(int argc,char* argv[])
 {
-	printf("\n***********************************************************FINE-GRAIN LOCKING BST***********************************************************\n");
+	printf("\n***********************************************************READER-WRITER LOCKING BST***********************************************************\n");
 	int opt;
 	int option_index = 0;
 
@@ -202,7 +202,7 @@ int main(int argc,char* argv[])
 #endif
 
 	/* Initialize the mutex lock */
-	int rc = pthread_mutex_init(&tree_lock,NULL);
+	int rc = pthread_rwlock_init(&tree_lock,NULL);
 	if(rc != 0)
 	{
 		printf("[ERROR]:Mutex Initialization Failed!\n");
@@ -271,7 +271,7 @@ int main(int argc,char* argv[])
 	printf("[LOG_INFO]:Number of duplicates = %d\n",dup);
 
 	/* Free the resources allocated on mutex initialization */
-	rc = pthread_mutex_destroy(&tree_lock);
+	rc = pthread_rwlock_destroy(&tree_lock);
 	if(rc != 0)
 	{
 		printf("[ERROR]:Mutex Destroy Failed!\n");
