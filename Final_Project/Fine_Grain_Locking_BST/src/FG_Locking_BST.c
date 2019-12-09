@@ -21,7 +21,17 @@ extern pthread_mutex_t dup_lock;	//Mutex lock to increment variable keeping trac
 int dup = 0;				//Variable keeping track of duplicate entries
 
 
-/* Create New Node */
+
+/*-----------------------------------------------------------------------
+ *@Function: create_new_node
+ *-----------------------------------------------------------------------
+ *@brief: Takes key and value to be inserted as input parameters,
+ *	  allocates memory for new node, inserts key, value and
+ *	  initializes the mutex lock for that node.
+ *-----------------------------------------------------------------------
+ *@returns: Address of newly created node (BST_Node*)
+ *-----------------------------------------------------------------------
+ * */
 BST_Node* create_new_node(int key,int value)
 {
 	/* Create a new node
@@ -53,16 +63,28 @@ BST_Node* create_new_node(int key,int value)
 	return new_node;
 }
 
-/* Insert */
+
+/*-----------------------------------------------------------------------
+ *@Function: insert
+ *-----------------------------------------------------------------------
+ *@brief: Inserts new node in the tree based on key values. Uses hand-
+ *	  over-hand locking to allow multiple threads to insert a node
+ *	  simultaneously.
+ *-----------------------------------------------------------------------
+ *@returns: void
+ *-----------------------------------------------------------------------
+ * */
 void insert(int key,int value,BST_Node* root)
 {
+	/* Check if root is NULL */
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
+		pthread_mutex_lock(&tree_lock);	//Lock the tree
+		/* Check if root of Tree exists or not */
 		if(g_root == NULL)
 		{
-			g_root = create_new_node(key,value);
-			pthread_mutex_unlock(&tree_lock);
+			g_root = create_new_node(key,value);	//Create root node if it doesn't exist
+			pthread_mutex_unlock(&tree_lock);	//Unlock the Tree
 			return;
 		}
 
