@@ -16,7 +16,7 @@
 #include <bits/stdc++.h> 
 
 /* Defines */
-#define MODULO		65535
+#define MODULO		9999
 #define MAX_SIZE	1200
 
 /* Global variables */
@@ -46,9 +46,9 @@ void *thread_func(void *args)
 	/* Loop to insert, search and range query multiple key-values */
 	for(int i=0;i<iterations_per_thread;i++)
 	{
-		key = rand() % (num_threads*iterations_per_thread);	//Generate random keys between 0-65535
-		find_key[tid] = key;					//Store the keys in an array
-		value = rand() % (num_threads*iterations_per_thread);	//Store the value in an array
+		key = rand() % (MODULO);	//Generate random keys between 0-65535
+		find_key[tid] = key;		//Store the keys in an array
+		value = rand() % (MODULO);	//Store the value in an array
 		find_value[tid] = value;				
 		printf("[THREAD_FUNC]: [Thread id %ld] [Key inserted = %d] [Value inserted = %d]\n",tid,key,value);
 		insert(find_key[tid],value,NULL);
@@ -80,7 +80,7 @@ void *thread_func(void *args)
 			range(find_key[i],find_key[num_threads - i],NULL,tid);
 		}
 #endif
-	}
+
 
 		/* Last thread will call range query */
 		if(tid == (num_threads - 1))
@@ -95,6 +95,28 @@ void *thread_func(void *args)
 			}
 			range(find_key[0],find_key[num_threads - 1],NULL,tid);
 		}
+
+
+
+
+
+	}
+#if 0
+
+		/* Last thread will call range query */
+		if(tid == (num_threads - 1))
+		{
+			if(find_key[tid] < find_key[0])
+			{
+				printf("[FIND_RANGE] [THREAD ID = %zu] [RANGE %d - %d]\n",tid,find_key[tid],find_key[0]);
+			}
+			else if(find_key[tid] > find_key[0])
+			{
+				printf("[FIND_RANGE] [THREAD ID = %zu] [RANGE %d - %d]\n",tid,find_key[0],find_key[tid]);
+			}
+			range(find_key[0],find_key[num_threads - 1],NULL,tid);
+		}
+#endif
 }
 
 

@@ -270,12 +270,13 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 
 	if(key1 < root->key)
 	{
-		if(root->left == NULL)
-		{
+		//if(root->left == NULL)
+		//{
 			//printf("Search Failed for node with key = %d\n",key1);
 			//pthread_mutex_unlock(&root->lock);
-		}
-		else
+		//}
+		//else
+		if(root->left != NULL)
 		{
 			pthread_rwlock_rdlock(&root->left->lock);
 			pthread_rwlock_unlock(&root->lock);
@@ -297,12 +298,13 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 	   in right subtree */
 	if (key2 > root->key)
 	{
-		if(root->right == NULL)
-		{
+		//if(root->right == NULL)
+		//{
 			//printf("Search Failed for node with Key = %d\n",key2);
 			//pthread_mutex_unlock(&root->lock);
-		}
-		else
+		//}
+		//else
+		if(root->right != NULL)
 		{
 			pthread_rwlock_rdlock(&root->right->lock);
 			pthread_rwlock_unlock(&root->lock);

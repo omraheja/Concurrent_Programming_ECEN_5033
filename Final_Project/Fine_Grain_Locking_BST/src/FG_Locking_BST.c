@@ -1,12 +1,24 @@
+/*@Author       : Om Raheja
+ *@File Name    : FG_Locking_BST.c
+ *@Date         : 12/9/2019
+ *@Tools        : Compiler:g++ ; Editor: Vim
+ *@Brief        : This file includes implementation insert(), search(),
+ *		  range query() and inorder_traversal() functions.
+ * */
+
+
+
 /* User defined header files */
 #include "FG_Locking_BST.h"
+#define DEBUG 1			//To keep printf statements, DEBUG = 1,
+				//Else to disable printf statement DEBUG = 0.
 
 
 /* External Global variables */
-extern pthread_mutex_t tree_lock;
-extern BST_Node *g_root;
-extern pthread_mutex_t dup_lock;
-int dup = 0;
+extern pthread_mutex_t tree_lock;	//Mutex lock to lock tree
+extern BST_Node *g_root;		//BST_Node to store address of global root
+extern pthread_mutex_t dup_lock;	//Mutex lock to increment variable keeping track of duplicate entries
+int dup = 0;				//Variable keeping track of duplicate entries
 
 
 /* Create New Node */
@@ -96,7 +108,9 @@ void insert(int key,int value,BST_Node* root)
 		dup++;
 		pthread_mutex_unlock(&dup_lock);
 		pthread_mutex_unlock(&root->lock);
+#if DEBUG
 		printf("Duplicates Not Allowed\n");
+#endif
 	}
 }
 
@@ -107,7 +121,6 @@ void inorder_traversal(BST_Node *g_root)
 	{
 		return;
 	}
-
 	inorder_traversal(g_root->left);
 	printf("[INORDER TRAVERSAL] [Key = %d] [Value = %d]\n",g_root->key,g_root->value);
 	inorder_traversal(g_root->right);
@@ -123,9 +136,10 @@ BST_Node* search(int key,BST_Node *root)
 		pthread_mutex_lock(&tree_lock);
 		if(g_root == NULL)
 		{
+#if DEBUG
 			printf("Search Failed for node with Key = %d\n",key);
+#endif
 			pthread_mutex_unlock(&tree_lock);
-			//return -1;
 			return NULL;
 		}
 		pthread_mutex_lock(&g_root->lock);
@@ -137,10 +151,10 @@ BST_Node* search(int key,BST_Node *root)
 	{
 		if(root->left == NULL)
 		{
+#if DEBUG
 			printf("Search Failed for node with key = %d\n",key);
+#endif
 			pthread_mutex_unlock(&root->lock);
-			//return -1;
-			//return NULL;
 		}
 		else
 		{
@@ -153,9 +167,10 @@ BST_Node* search(int key,BST_Node *root)
 	{
 		if(root->right == NULL)
 		{
+#if DEBUG
 			printf("Search Failed for node with Key = %d\n",key);
+#endif
 			pthread_mutex_unlock(&root->lock);
-			//return -1;
 			return NULL;
 		}
 		else
@@ -168,9 +183,7 @@ BST_Node* search(int key,BST_Node *root)
 	else
 	{
 
-		//printf("[SEARCH] [Key-------------------------------->%d] [Data-------------------------------->%d]\n",root->key,root->value);
 		pthread_mutex_unlock(&root->lock);
-		//return 1;
 		return root;
 	}
 }
@@ -270,12 +283,7 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 
 	if(key1 < root->key)
 	{
-		if(root->left == NULL)
-		{
-			//printf("Search Failed for node with key = %d\n",key1);
-			//pthread_mutex_unlock(&root->lock);
-		}
-		else
+		if(root->left != NULL)
 		{
 			pthread_mutex_lock(&root->left->lock);
 			pthread_mutex_unlock(&root->lock);
@@ -287,8 +295,10 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 	/* if root's data lies in range, then prints root's data */
         if ( key1 <= root->key && key2 >= root->key )
         {
+#if DEBUG
                 printf("[RANGE QUERY] [THREAD ID -> %d] [RANGE VALUE -> %d]\n", thread_id, root->key);
-                //pthread_mutex_unlock(&root->lock);
+#endif
+	 	//pthread_mutex_unlock(&root->lock);
         }
 
 
@@ -297,12 +307,7 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 	   in right subtree */
 	if (key2 > root->key)
 	{
-		if(root->right == NULL)
-		{
-			//printf("Search Failed for node with Key = %d\n",key2);
-			//pthread_mutex_unlock(&root->lock);
-		}
-		else
+		if(root->right != NULL)
 		{
 			pthread_mutex_lock(&root->right->lock);
 			pthread_mutex_unlock(&root->lock);

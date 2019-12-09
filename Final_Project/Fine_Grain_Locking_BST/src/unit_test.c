@@ -54,6 +54,7 @@ void test_insert(void)
 	insert(70,700,g_root);
 	insert(80,800,g_root);
 	insert(90,900,g_root);
+	range(10,90,NULL,1);
 }
 
 
@@ -91,7 +92,7 @@ void test_search(void)
 	CU_ASSERT(test_node->value == 900);
 
 	test_node = search(150,g_root);
-	CU_ASSERT_NOT_EQUAL(test_node,NULL);
+	CU_ASSERT_EQUAL(test_node,NULL);
 }
 
 
