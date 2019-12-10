@@ -79,9 +79,23 @@ void inorder_traversal(BST_Node *root);
 BST_Node* search(int key,BST_Node *root);
 
 
-void range_query(int key1,int key2,BST_Node *root);
-
+/*@Function Name: range
+ *@Brief        : Takes key1 and key2 along with root as input arguments and
+ *                prints all nodes between those range at that instant. Multiple
+ *                threads can access this function simultaneously to search for
+ *                different ranges. Hand-over-hand locking mechanism is used to
+ *                protect multiple threads from data races.
+ *@Param in [1] : int key 1
+ *@Param in [2] : int key 2
+ *@Param in [3] : BST_Node* root
+ *@Param in [4] : int thread_id
+ *@Return       : void
+ * */
 void range(int key1,int key2,BST_Node *root,int thread_id);
+
+#if 0
+void range_query(int key1,int key2,BST_Node *root);
+#endif
 
 
 #endif

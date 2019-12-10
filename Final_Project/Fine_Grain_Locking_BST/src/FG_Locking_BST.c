@@ -21,7 +21,6 @@ extern pthread_mutex_t dup_lock;	//Mutex lock to increment variable keeping trac
 int dup = 0;				//Variable keeping track of duplicate entries
 
 
-
 /*-----------------------------------------------------------------------
  *@Function: create_new_node
  *-----------------------------------------------------------------------
@@ -88,42 +87,46 @@ void insert(int key,int value,BST_Node* root)
 			return;
 		}
 
-		pthread_mutex_lock(&g_root->lock);
-		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_mutex_lock(&g_root->lock);	//Lock the parent node
+		root = g_root;				//Assign parent node to root(local to this function)
+		pthread_mutex_unlock(&tree_lock);	//Unlock the tree
 	}
 
-
+	/* Check if key to be inserted is greater than the key of the root */
 	if(key > root->key)
 	{
+		/* Check if the node at which the new node will get inserted is NULL or not */
 		if(root->right == NULL)
 		{
-			root->right = create_new_node(key,value);
-			pthread_mutex_unlock(&root->lock);
+			root->right = create_new_node(key,value);	//Create new node, link it to the right of parent 
+			pthread_mutex_unlock(&root->lock);		//Unlock the parent node
 		}
 		else
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
-			insert(key,value,root->right);
+			pthread_mutex_lock(&root->right->lock);	//If node exists, traverse further down the tree and lock the right child
+			pthread_mutex_unlock(&root->lock);	//Unlock parent node
+			insert(key,value,root->right);		//Call insert with root as right child
 		}
 
 	}
+	/* Check if key to be inserted is less than the key of the root */
 	else if(key < root->key)
 	{
+		/* Check if the node at which the new node will get inserted is NULL or not */
 		if(root->left == NULL)
 		{
-			root->left = create_new_node(key,value);
-			pthread_mutex_unlock(&root->lock);
+			root->left = create_new_node(key,value);	//Create new node, link it to the left of parent
+			pthread_mutex_unlock(&root->lock);		//Unlock the parent node
 		}
 		else
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
-			insert(key,value,root->left);
+			pthread_mutex_lock(&root->left->lock);	//If node exists, traverse further down the tree and lock the left child
+			pthread_mutex_unlock(&root->lock);	//Unlock parent node
+			insert(key,value,root->left);		//Call insert with root as left child
 		}
 	}
-
+	/* This condition is entered when a key that is already existing
+	 * in the tree is being tried to insert again  */
 	else
 	{
 		pthread_mutex_lock(&dup_lock);
@@ -131,87 +134,116 @@ void insert(int key,int value,BST_Node* root)
 		pthread_mutex_unlock(&dup_lock);
 		pthread_mutex_unlock(&root->lock);
 #if DEBUG
-		printf("Duplicates Not Allowed\n");
+		printf("Duplicates Key = %d Not Allowed\n",root->key);
 #endif
 	}
 }
 
 
+
+/*-----------------------------------------------------------------------
+ *@Function: inorder_traversal
+ *-----------------------------------------------------------------------
+ *@brief: This function prints all the nodes in the tree in ascending
+ *	  order. This function is not thread safe. It is used after
+ *	  all the threads are joined.
+ *-----------------------------------------------------------------------
+ *@returns: void
+ *-----------------------------------------------------------------------
+ * */
 void inorder_traversal(BST_Node *g_root)
 {
+	/* Check if the root passed as input to the function is NULL or not */
 	if(g_root == NULL)
 	{
+		//If root passed is null that means the tree is empty. In that case you return
 		return;
 	}
-	inorder_traversal(g_root->left);
-	printf("[INORDER TRAVERSAL] [Key = %d] [Value = %d]\n",g_root->key,g_root->value);
-	inorder_traversal(g_root->right);
+	inorder_traversal(g_root->left);	//Traverse recursively till the leaf node on left half of tree
+	printf("[INORDER TRAVERSAL] [Key = %d] [Value = %d]\n",g_root->key,g_root->value);	//Print the node
+	inorder_traversal(g_root->right);	//Traverse recursively on the right half of the tree
 }
 
 
-
-
+/*-----------------------------------------------------------------------
+ *@Function: search
+ *-----------------------------------------------------------------------
+ *@brief: This function takes a node as input, and keeping that as the
+ *	  reference searches the key. If the key is found, the node is
+ *	  returned, else NULL is returned.
+ *-----------------------------------------------------------------------
+ *@returns: BST_Node*
+ *-----------------------------------------------------------------------
+ * */
 BST_Node* search(int key,BST_Node *root)
 {
+	/* Check if the input passed is NULL or not */
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
-		if(g_root == NULL)
+		pthread_mutex_lock(&tree_lock);	//Lock the tree
+		
+		/* Check if tree exixts or not by checking if global root is NULL or not */
+		if(g_root == NULL)	
 		{
 #if DEBUG
 			printf("Search Failed for node with Key = %d\n",key);
 #endif
-			pthread_mutex_unlock(&tree_lock);
-			return NULL;
+			pthread_mutex_unlock(&tree_lock);	//Unlock the tree
+			return NULL;				//return NULL indicating node with requested key not found
 		}
-		pthread_mutex_lock(&g_root->lock);
-		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_mutex_lock(&g_root->lock);	//Lock the parent node
+		root = g_root;				//Assign parent node to root(local to this function)
+		pthread_mutex_unlock(&tree_lock);	//Unlock the tree	
 	}
 
+	/* Check if key to be searched is less than the key of the parent */
 	if(key < root->key)
 	{
+		/* Check if the node at which the key is searched is NULL or not */
 		if(root->left == NULL)
 		{
 #if DEBUG
 			printf("Search Failed for node with key = %d\n",key);
 #endif
-			pthread_mutex_unlock(&root->lock);
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
 		}
+		/* If parent node exists, we traverse down further to the left half of the tree */
 		else
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
-			search(key,root->left);
+			pthread_mutex_lock(&root->left->lock);	//Lock the left child
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
+			search(key,root->left);			//Search key at left child
 		}
 	}
+	/* Check if key to be searched is greater than the key of the parent */
 	else if(key > root->key)
 	{
+		/* Check if the node at which the key is searched is NULL or not */
 		if(root->right == NULL)
 		{
 #if DEBUG
 			printf("Search Failed for node with Key = %d\n",key);
 #endif
-			pthread_mutex_unlock(&root->lock);
-			return NULL;
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
+			return NULL;				//return NULL indicating node with requested key not found
 		}
 		else
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
-			search(key,root->right);
+			pthread_mutex_lock(&root->right->lock);	//Lock the right child
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
+			search(key,root->right);		//Search key at right child
 		}
 	}
+	/* Key found */
 	else
 	{
-
-		pthread_mutex_unlock(&root->lock);
-		return root;
+		pthread_mutex_unlock(&root->lock);	//Unlock the parent
+		return root;				//Return the root
 	}
 }
 
 
-
+#if 0
 /* This Function is not being used
  * Will me removed in the future commit */
 void range_query(int key1,int key2,BST_Node *root)
@@ -271,17 +303,29 @@ void range_query(int key1,int key2,BST_Node *root)
 		key1++;
 	}
 }
+#endif
 
 
 
-
-
-
-
+/*-----------------------------------------------------------------------
+ *@Function: range
+ *-----------------------------------------------------------------------
+ *@brief: Takes key1 and key2 along with root as input arguments and
+ *	  prints all nodes between those range at that instant. Multiple
+ *	  threads can access this function simultaneously to search for
+ *	  different ranges. Hand-over-hand locking mechanism is used to
+ *	  protect multiple threads from data races.
+ *-----------------------------------------------------------------------
+ *@returns: void
+ *-----------------------------------------------------------------------
+ * */
 void range(int key1,int key2,BST_Node *root,int thread_id)
 {
-	int temp;
+	int temp;		//temporary variable to store key
 
+	/* Ensure that key1 is always less than key2
+	 * If key1 is greater than key2, interchange
+	 * them */
 	if(key1 > key2)
 	{
 		temp = key1;
@@ -289,54 +333,59 @@ void range(int key1,int key2,BST_Node *root,int thread_id)
 		key2 = temp;
 	}
 
+	/* Check if the input passed is NULL or not */
 	if(root == NULL)
 	{
-		pthread_mutex_lock(&tree_lock);
-		if(g_root == NULL)
+		pthread_mutex_lock(&tree_lock); //Lock tree
+		if(g_root == NULL)		//Check if global root is NULL or not
 		{
 			//printf("Search Failed for node with Key = %d\n",key1);
-			pthread_mutex_unlock(&tree_lock);
-			return;
+			pthread_mutex_unlock(&tree_lock);	//Unlock tree
+			return;					//return in that case
 		}
-		pthread_mutex_lock(&g_root->lock);
-		root = g_root;
-		pthread_mutex_unlock(&tree_lock);
+		pthread_mutex_lock(&g_root->lock);	//Lock parent node
+		root = g_root;				//Assign parent node to root(local to this function)
+		pthread_mutex_unlock(&tree_lock);	//Unlock parent node
 	}
-
+	
+	/* Check if key to be searched is less than the key of the parent */
 	if(key1 < root->key)
 	{
+		/* If left child is not NULL */
 		if(root->left != NULL)
 		{
-			pthread_mutex_lock(&root->left->lock);
-			pthread_mutex_unlock(&root->lock);
-			range(key1,key2,root->left,thread_id);
-			pthread_mutex_lock(&root->lock);
+			pthread_mutex_lock(&root->left->lock);	//Lock the left child
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
+			range(key1,key2,root->left,thread_id);	//Call range recursively to reach the leaf node
+			pthread_mutex_lock(&root->lock);	//Lock the parent
 		}
 	}
 
 	/* if root's data lies in range, then prints root's data */
-        if ( key1 <= root->key && key2 >= root->key )
+        if ((key1 <= root->key) && (key2 >= root->key))
         {
 #if DEBUG
-                printf("[RANGE QUERY] [THREAD ID -> %d] [RANGE VALUE -> %d]\n", thread_id, root->key);
+                printf("[RANGE QUERY] [THREAD ID -> %d] [RANGE KEY -> %d]\n", thread_id, root->key);
 #endif
-	 	//pthread_mutex_unlock(&root->lock);
         }
 
 
 
 	/* If root->data is smaller than k2, then only we can get o/p keys
-	   in right subtree */
+	 * in right subtree.Check if key to be searched is less than the
+	 * key of the parent
+	 * */
 	if (key2 > root->key)
 	{
+		/* If right child is not NULL */
 		if(root->right != NULL)
 		{
-			pthread_mutex_lock(&root->right->lock);
-			pthread_mutex_unlock(&root->lock);
-			range(key1,key2,root->right,thread_id);
-			pthread_mutex_lock(&root->lock);
+			pthread_mutex_lock(&root->right->lock);	//Lock the right child
+			pthread_mutex_unlock(&root->lock);	//Unlock the parent
+			range(key1,key2,root->right,thread_id);	//Call range recursively to access right half of tree
+			pthread_mutex_lock(&root->lock);	//Lock the parent
 		}
 	}
 
-	pthread_mutex_unlock(&root->lock);
+	pthread_mutex_unlock(&root->lock);		//After the entire operation, unlock the parent
 }

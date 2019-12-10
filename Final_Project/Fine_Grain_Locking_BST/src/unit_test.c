@@ -40,59 +40,35 @@ int clean_suite(void)
 
 void test_create_new_node(void)
 {
-	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(50,100),NULL);
+	CU_ASSERT_NOT_EQUAL(g_root = create_new_node(10000,100),NULL);
 }
 
 
 void test_insert(void)
 {
-        insert(10,100,g_root);
-	insert(20,200,g_root);
-        insert(30,300,g_root);
-        insert(40,400,g_root);
-        insert(60,600,g_root);
-	insert(70,700,g_root);
-	insert(80,800,g_root);
-	insert(90,900,g_root);
-	range(10,90,NULL,1);
+	
+	for(int i=50;i>0;i--)
+	{
+		//printf("Insert[%d] = %d\n",i,i*1);
+		insert(i*10,i*1,g_root);
+	}
+
+	inorder_traversal(g_root);
+	range(10,500,NULL,1);
 }
 
 
 void test_search(void)
 {
 	BST_Node* test_node = NULL;
-	
-	test_node = search(10,g_root);
-	CU_ASSERT(test_node->value == 100);
-	
-	test_node = search(20,g_root);
-	CU_ASSERT(test_node->value == 200);
-       
-	
-	test_node = search(30,g_root);
-	CU_ASSERT(test_node->value == 300);
-	
-	
-	test_node = search(40,g_root);
-	CU_ASSERT(test_node->value == 400);
-	
 
-	test_node = search(60,g_root);
-	CU_ASSERT(test_node->value == 600);
 	
-	test_node = search(70,g_root);
-	CU_ASSERT(test_node->value == 700);
-       
-	
-	test_node = search(80,g_root);
-	CU_ASSERT(test_node->value == 800);
-	
-	
-	test_node = search(90,g_root);
-	CU_ASSERT(test_node->value == 900);
-
-	test_node = search(150,g_root);
-	CU_ASSERT_EQUAL(test_node,NULL);
+	for(int i=50;i>25;i--)
+	{
+		test_node = search(i*10,g_root);
+		//printf("Value[%d] = %d\n",i,test_node->value);
+		CU_ASSERT((test_node->value) == (i));
+	} 
 }
 
 

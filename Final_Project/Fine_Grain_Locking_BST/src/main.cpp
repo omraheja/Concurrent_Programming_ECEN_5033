@@ -20,7 +20,8 @@
 #define MODULO		65535
 #define MAX_SIZE	1200
 #define DEBUG		1
-
+#define LOW_CONTENTION	10000
+#define HIGH_CONTENTION	10000
 
 /* Global variables */
 pthread_mutex_t tree_lock;		//Mutex lock to lock the root of the BST
@@ -43,6 +44,50 @@ struct timespec start,stop;		//Stores start time and end time
 
 
 
+/*-----------------------------------------------------------------------------
+ *@Function: delete_bst
+ *-----------------------------------------------------------------------------
+ *@brief: De-allocate memory allocated for BST nodes 
+ *-----------------------------------------------------------------------------
+ *@Reference: https://www.geeksforgeeks.org/write-a-c-program-to-delete-a-tree/
+ *-----------------------------------------------------------------------------
+ *@returns: void
+ *-----------------------------------------------------------------------------
+ * */
+void delete_bst(BST_Node* root)
+{
+	if(root == NULL)
+	{
+		return;
+	}
+
+	delete_bst(root->left);
+	delete_bst(root->right);
+
+	printf("Deleting Node: %d\n",root->key);
+
+	/* Free the resources allocated on mutex initialization */
+        int rc = pthread_mutex_destroy(&root->lock);
+        if(rc != 0)
+        {
+                printf("[ERROR]:Mutex Destroy Failed!\n");
+        }
+
+	if(root->left != NULL)
+	{
+		free(root->left);
+	}
+	if(root->right != NULL)
+	{
+		free(root->right);
+	}
+}
+
+
+
+
+
+
 /*-----------------------------------------------------------------------
  *@Function: high_contention_test
  *-----------------------------------------------------------------------
@@ -58,17 +103,26 @@ struct timespec start,stop;		//Stores start time and end time
  * */
 void *high_contention_test(void *args)
 {
-	 size_t tid = *((size_t *)args);         //Extract the thread id
+	size_t tid = *((size_t *)args);         //Extract the thread id
 #if DEBUG
-	 printf("[HIGH CONTENTION TEST]: Thread ID = %zu\n",tid);
+	printf("[HIGH CONTENTION TEST]: Thread ID = %zu\n",tid);
 #endif
-	 /* For loop to iterate for the number of times the user mentions and
-	  * let all threads contest for a particular key in the concurrent 
-	  * tree */
-	 for(int i=0;i<iterations_per_thread;i++)
-	 {
-		 search(500,NULL);		//Search Key=500
-	 }
+	/* For loop to iterate for the number of times the user mentions and
+	 * let all threads contest for a particular key in the concurrent 
+	 * tree */
+	for(int i=0;i<iterations_per_thread;i++)
+	{
+		//search(500,NULL);		//Search Key=500
+	
+		if(search(500,NULL))		//Search Key=500
+		{
+			printf("Key Found\n");
+		}
+		else
+		{
+			printf("Key Not Found\n");
+		}
+	}
 }
 
 
@@ -88,17 +142,17 @@ void *high_contention_test(void *args)
 
 void *low_contention_test(void *args)
 {
-	 size_t tid = *((size_t *)args);         //Extract the thread id
+	size_t tid = *((size_t *)args);         //Extract the thread id
 #if DEBUG
-	 printf("[LOW CONTENTION TEST]: Thread ID = %zu\n",tid);
+	printf("[LOW CONTENTION TEST]: Thread ID = %zu\n",tid);
 #endif
 
-	 /* For loop to iterate for the number of times the user mentions and
-	  * let all threads contest for random keys in the concurrent tree */
-	 for(int i=0;i<iterations_per_thread;i++)
-	 {
-		 search(rand()%MODULO,NULL);	//Search random keys between 0-65535
-	 }
+	/* For loop to iterate for the number of times the user mentions and
+	 * let all threads contest for random keys in the concurrent tree */
+	for(int i=0;i<iterations_per_thread;i++)
+	{
+		search(rand()%MODULO,NULL);	//Search random keys between 0-65535
+	}
 
 }
 
@@ -183,19 +237,22 @@ void *thread_func(void *args)
 #if DEBUG
 				printf("[FIND_RANGE] [THREAD ID = %zu] [RANGE %d - %d]\n",tid,find_key[tid],find_key[0]);
 #endif
+				range(find_key[0],find_key[num_threads - 1],NULL,tid);
+
 			}
 			else if(find_key[tid] > find_key[0])
 			{
 #if DEBUG
 				printf("[FIND_RANGE] [THREAD ID = %zu] [RANGE %d - %d]\n",tid,find_key[0],find_key[tid]);
 #endif
+				range(find_key[0],find_key[num_threads - 1],NULL,tid);
 			}
-			range(find_key[0],find_key[num_threads - 1],NULL,tid);
+			else
+			{
+				printf("Key1 %d = Key2 (%d), No node between them\n",find_key[0],find_key[num_threads-1]);
+			}
+			//range(find_key[0],find_key[num_threads - 1],NULL,tid);
 		}
-
-
-
-
 
 	}
 
@@ -270,13 +327,13 @@ int main(int argc,char* argv[])
 				printf("Number of iterations per thread = %d\n",iterations_per_thread);
 				break;
 
-			/* Number of threads */
+				/* Number of threads */
 			case 't':
 				num_threads = atoi(optarg);
 				printf("Number of threads = %d\n",num_threads);
 				break;
 
-			/* Help option */
+				/* Help option */
 			case 'm':
 				printf("\t\t\tCONCURRENT TREE HELP SECTION\n");
 				printf("1. -t = <number of threads> Specify the number of threads\n");
@@ -287,7 +344,7 @@ int main(int argc,char* argv[])
 				exit(1);
 				break;
 
-			/* Set low contention flag to test low contention between multiple threads */
+				/* Set low contention flag to test low contention between multiple threads */
 			case 'l':
 				if(high_contention_flag == true)
 				{
@@ -300,7 +357,7 @@ int main(int argc,char* argv[])
 				}
 				break;
 
-			/* Set high contention flag to test high contention between multiple threads */
+				/* Set high contention flag to test high contention between multiple threads */
 			case 'h':
 				if(low_contention_flag == true)
 				{
@@ -314,7 +371,7 @@ int main(int argc,char* argv[])
 				break;
 
 
-			/* Default case */
+				/* Default case */
 			default:
 				printf("[ERROR]: Invalid arguments, type './concurrent_tree --help' for help'\n");
 				break;
@@ -335,7 +392,7 @@ int main(int argc,char* argv[])
 
 
 	/* Initialize the mutex lock */
-	 rc = pthread_mutex_init(&tree_lock,NULL);
+	rc = pthread_mutex_init(&tree_lock,NULL);
 	if(rc != 0)
 	{
 		printf("[ERROR]:Mutex Initialization Failed!\n");
@@ -351,13 +408,15 @@ int main(int argc,char* argv[])
 		exit(-1);
 	}
 
-/************************************************************************************************************************/
-/*					INSERT | SEARCH | RANGE QUERY OPERATION 					*/
-/************************************************************************************************************************/
+	/************************************************************************************************************************/
+	/*					INSERT | SEARCH | RANGE QUERY OPERATION 					*/
+	/************************************************************************************************************************/
 
 	/* If none of the low or high contention cases are being tested */
 	if((low_contention_flag == false) && (high_contention_flag == false))
 	{
+		clock_gettime(CLOCK_MONOTONIC,&start);		//Start the timer to calculate time taken for high contention test
+		
 		/* Create Number of threads mentioned in command line argument */
 		for(size_t i =0;i<num_threads;i++)
 		{
@@ -383,12 +442,14 @@ int main(int argc,char* argv[])
 			}
 			//printf("Joined thread %zu\n",i);
 		}
+
+		clock_gettime(CLOCK_MONOTONIC,&stop);		//Start the timer to calculate time taken for high contention test
 	}
 
 
-/************************************************************************************************************************/
-/*						HIGH CONTENTION TEST		 					*/
-/************************************************************************************************************************/
+	/************************************************************************************************************************/
+	/*						HIGH CONTENTION TEST		 					*/
+	/************************************************************************************************************************/
 	/* Check high contention test */
 	if(high_contention_flag == true)
 	{
@@ -399,7 +460,7 @@ int main(int argc,char* argv[])
 		 * the high contention and low contention between
 		 * multiple threads
 		 * */
-		int nodes = 1000;
+		int nodes = HIGH_CONTENTION;
 
 		while(nodes != 100)
 		{
@@ -439,19 +500,19 @@ int main(int argc,char* argv[])
 	}
 
 
-/************************************************************************************************************************/
-/*                                              LOW CONTENTION TEST                                                     */
-/************************************************************************************************************************/
+	/************************************************************************************************************************/
+	/*                                              LOW CONTENTION TEST                                                     */
+	/************************************************************************************************************************/
 	if(low_contention_flag == true)
 	{
 		printf("LOW CONTENTION TEST\n");
 
-		 /* Create a tree
-                 * This tree will be used as a base case for testing
-                 * the high contention and low contention between
-                 * multiple threads
-                 * */
-		int nodes = 1000;
+		/* Create a tree
+		 * This tree will be used as a base case for testing
+		 * the high contention and low contention between
+		 * multiple threads
+		 * */
+		int nodes = LOW_CONTENTION;
 		while(nodes != 100)
 		{
 			insert(nodes,rand()%65535,NULL);
@@ -502,6 +563,15 @@ int main(int argc,char* argv[])
 		printf("[ERROR]:Mutex Destroy Failed!\n");
 	}
 
+	
+	/* Free the resources allocated on mutex initialization */
+        rc = pthread_mutex_destroy(&dup_lock);
+        if(rc != 0)
+        {
+                printf("[ERROR]:Mutex Destroy Failed!\n");
+        }
+
+
 
 	/* Perform basic operations to display time calculated in seconds and nanpseconds */
 	unsigned long long elapsed_ns;
@@ -509,6 +579,14 @@ int main(int argc,char* argv[])
 	printf("Elapsed (ns): %llu\n",elapsed_ns);
 	double elapsed_s = ((double)elapsed_ns)/1000000000.0;
 	printf("Elapsed (s): %lf\n",elapsed_s);
+
+
+
+	delete_bst(g_root);
+
+	free(g_root);
+	free(threads);
+	free(args);
 
 	return 0;
 }
