@@ -19,7 +19,7 @@
 /* Defines */
 #define MODULO		65535
 #define MAX_SIZE	1200
-#define DEBUG		1
+#define DEBUG		0
 #define LOW_CONTENTION  10000
 #define HIGH_CONTENTION 10000
 
@@ -65,9 +65,9 @@ void delete_bst(BST_Node* root)
 
         delete_bst(root->left);
         delete_bst(root->right);
-
+#if DEBUG
         printf("Deleting Node: %d\n",root->key);
-
+#endif
         /* Free the resources allocated on mutex initialization */
         int rc = pthread_rwlock_destroy(&root->lock);
         if(rc != 0)
