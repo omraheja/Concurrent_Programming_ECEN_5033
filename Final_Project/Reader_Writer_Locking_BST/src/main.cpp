@@ -310,9 +310,10 @@ int main(int argc,char* argv[])
 				printf("\t\t\tCONCURRENT TREE HELP SECTION\n");
 				printf("1. -t = <number of threads> Specify the number of threads\n");
 				printf("2. -i = <number of iterations> Specify the number of iterations for insert/search/range query\n");
-				printf("3. -l = <lock selection> Specify locking mechanism to be used, 'fine-grain' or 'reader-writer'\n\n");
 				printf("\t\t\tINSTRUCTIONS TO RUN THE CODE\n>>  To run the program,type 'make all'\n");
-				printf(">>  ./Concurrent_tree -t [number_of_threads] -i [number_of_iterations] -l [lock]\n\n");
+				printf(">> Normal operation ./concurrent_tree -t [number_of_threads] -i [number_of_iterations]\n\n");
+				printf(">> Low contention test ./concurrent_tree -t [number_of_threads] -i [number_of_iterations] -l\n\n");
+				printf(">> High contention test ./concurrent_tree -t [number_of_threads] -i [number_of_iterations] -h\n\n");
 				exit(1);
 				break;
 
